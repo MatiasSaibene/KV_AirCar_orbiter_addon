@@ -8,6 +8,7 @@
 // Control module for AIRCAR vessel class
 //===========================================================
 
+#include <strings.h>
 #define ORBITER_MODULE
 #include <cstring>
 #include <cstdint>
@@ -15,8 +16,7 @@
 #include <algorithm>
 #include <cstdio>
 
-/*
-// 1. vertical lift component (code from DeltaGlider)
+// 1. vertical lift component (wings and body)
 
 void VLiftCoeff (VESSEL *v, double aoa, double M, double Re, void *context, double *cl, double *cm, double *cd)
 {
@@ -41,7 +41,7 @@ void VLiftCoeff (VESSEL *v, double aoa, double M, double Re, void *context, doub
 	// profile drag + (lift-)induced drag + transonic/supersonic wave (compressibility) drag
 }
 
-// 2. horizontal lift component (code from DeltaGlider)
+// 2. horizontal lift component (vertical stabilisers and body)
 
 void HLiftCoeff (VESSEL *v, double beta, double M, double Re, void *context, double *cl, double *cm, double *cd)
 {
@@ -59,7 +59,7 @@ void HLiftCoeff (VESSEL *v, double beta, double M, double Re, void *context, dou
 	*cm = 0.0;
 	*cd = 0.015 + oapiGetInducedDrag (*cl, 1.5, 0.6) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
 }
-*/
+
 
 //Constructor
 AIRCAR::AIRCAR(OBJHANDLE hVessel, int flightmodel) : VESSEL4(hVessel, flightmodel){
@@ -107,20 +107,27 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 	CreateThrusterGroup(&th_main, 1, THGROUP_MAIN);
 
 
+	//Main wings lift surfaces
+	hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 0, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
+
+	CreateAirfoil3(LIFT_HORIZONTAL, (Elevators_mobile_parts_Location), HLiftCoeff, 0, AIRCAR_HLIFT_C, AIRCAR_HLIFT_S, AIRCAR_HLIFT_A);
+
+
 	//Control surfaces...
-	CreateControlSurface3(AIRCTRL_ELEVATOR, 0.8008, 1.7, Axis_elevator_Location, AIRCTRL_AXIS_AUTO, 1, anim_elevator);
 
-	CreateControlSurface3(AIRCTRL_ELEVATORTRIM, 0.8008, 1.7, Axis_elevator_Location, AIRCTRL_AXIS_AUTO, 1, anim_elevator_trim);
+	hlaileron = CreateControlSurface3(AIRCTRL_AILERON, 0.0911, 0.2, Axis_aileron_left_Location, AIRCTRL_AXIS_XNEG,1, anim_raileron);
 
-	CreateControlSurface3(AIRCTRL_RUDDER, 0.0924, 0.85, Axis_rudder_left_Location, AIRCTRL_AXIS_AUTO,
+	hraileron = CreateControlSurface3(AIRCTRL_AILERON, 0.0911, 0.2, Axis_aileron_right_Location, AIRCTRL_AXIS_XPOS,1, anim_laileron);
+
+	CreateControlSurface3(AIRCTRL_ELEVATOR, 0.8008, 0.2, Axis_elevator_Location, AIRCTRL_AXIS_XPOS, 1, anim_elevator);
+
+	CreateControlSurface3(AIRCTRL_ELEVATORTRIM, 0.8008, 0.1, Axis_elevator_Location, AIRCTRL_AXIS_XPOS, 1, anim_elevator_trim);
+
+	CreateControlSurface3(AIRCTRL_RUDDER, 0.0924, 0.2, Axis_rudder_left_Location, AIRCTRL_AXIS_YPOS,
 	1, anim_left_rudder);
 
-	CreateControlSurface3(AIRCTRL_RUDDER, 0.0924, 0.85, Axis_rudder_right_Location, AIRCTRL_AXIS_AUTO,
+	CreateControlSurface3(AIRCTRL_RUDDER, 0.0924, 0.2, Axis_rudder_right_Location, AIRCTRL_AXIS_YPOS,
 	1, anim_right_rudder);
-
-	CreateControlSurface3(AIRCTRL_AILERON, 0.0911, 1.7, Axis_aileron_left_Location, AIRCTRL_AXIS_AUTO,1, anim_raileron);
-
-	CreateControlSurface3(AIRCTRL_AILERON, 0.0911, 1.7, Axis_aileron_right_Location, AIRCTRL_AXIS_AUTO,1, anim_laileron);
 
 	//Add mesh
 	AddMesh("KleinVision_AirCar");
@@ -443,6 +450,30 @@ void AIRCAR::DefineAnimations(void){
 	AddAnimationComponent(anim_raileron, 0, 1, &RAileron);
 }
 
+///////////Load status from scenario file
+
+void AIRCAR::clbkLoadStateEx(FILEHANDLE scn, void *vs){
+
+	char *line;
+
+	while(oapiReadScenario_nextline(scn, line)){
+		if(!strncasecmp(line, "FOLDWING", 8)){
+			sscanf(line+8, "%d%lf", (int *)&fold_status, &fold_aileron_proc);
+			SetAnimation(anim_FoldAileronLeftWing, fold_aileron_proc);
+		} else {
+			ParseScenarioLineEx(line, vs);
+		}
+	}
+}
+
+void AIRCAR::clbkSaveState(FILEHANDLE scn){
+
+	char cbuf[256];
+
+	SaveDefaultState(scn);
+	sprintf(cbuf, "%d %0.4f", fold_status, fold_aileron_proc);
+	oapiWriteScenario_string(scn, "FOLDWING", cbuf);
+}
 
 ////////////Logic for trigger animations
 
