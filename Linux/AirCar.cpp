@@ -8,7 +8,13 @@
 // Control module for AIRCAR vessel class
 //===========================================================
 
-#include <strings.h>
+//===============================================================
+//      I thank the users who helped me get this thing flying:
+//francisdrake
+//Thunder Chicken
+//Urwumpe
+//===========================================================
+
 #define ORBITER_MODULE
 #include <cstring>
 #include <cstdint>
@@ -21,9 +27,9 @@
 void VLiftCoeff (VESSEL *v, double aoa, double M, double Re, void *context, double *cl, double *cm, double *cd)
 {
 	const int nabsc = 9;
-	static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -2*RAD, 15*RAD,20*RAD,25*RAD,60*RAD,180*RAD};
-	static const double CL[nabsc]  = {       0,      0,   -0.4,      0,    0.7,     1,   0.8,     0,      0};
-	static const double CM[nabsc]  = {       0,      0,  0.014, 0.0039, -0.006,-0.008,-0.010,     0,      0};
+	static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -2*RAD, 0*RAD,2*RAD,25*RAD,60*RAD,180*RAD};
+	static const double CL[nabsc]  = {    0,    -0.56,  -0.56,  -0.15,   0.15, 0.25, 0.56,  0.56,    0.00};
+	static const double CM[nabsc]  = {    0,   0.005,   0.004,   0.001, 0.000,-0.001,-0.004, 0.005,  0.00};
 	int i;
 	for (i = 0; i < nabsc-1 && AOA[i+1] < aoa; i++);
 	if (i < nabsc - 1) {
@@ -37,7 +43,7 @@ void VLiftCoeff (VESSEL *v, double aoa, double M, double Re, void *context, doub
 	}
 	double saoa = sin(aoa);
 	double pd = 0.015 + 0.4*saoa*saoa;  // profile drag
-	*cd = pd + oapiGetInducedDrag (*cl, 1.5, 0.7) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
+	*cd = pd + oapiGetInducedDrag (*cl, AIRCAR_VLIFT_A, 0.7) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
 	// profile drag + (lift-)induced drag + transonic/supersonic wave (compressibility) drag
 }
 
@@ -57,7 +63,7 @@ void HLiftCoeff (VESSEL *v, double beta, double M, double Re, void *context, dou
 		*cl = CL[nabsc - 1];
 	}
 	*cm = 0.0;
-	*cd = 0.015 + oapiGetInducedDrag (*cl, 1.5, 0.6) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
+	*cd = 0.015 + oapiGetInducedDrag (*cl, AIRCAR_HLIFT_A, 0.6) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
 }
 
 
@@ -97,6 +103,7 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
     SetMaxWheelbrakeForce(2e5);
 	SetCrossSections(AIRCAR_CS);
 	SetPMI(AIRCAR_PMI);
+	SetRotDrag(AIRCAR_RD);
 	SetTouchdownPoints(tdvtx_wheels, wheels);
 
 	//Propellant resources
@@ -109,24 +116,27 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 
 	//Main wings lift surfaces
 	hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 0, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
+	//hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 1.1359, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
 
 	CreateAirfoil3(LIFT_HORIZONTAL, (Elevators_mobile_parts_Location), HLiftCoeff, 0, AIRCAR_HLIFT_C, AIRCAR_HLIFT_S, AIRCAR_HLIFT_A);
 
 
 	//Control surfaces...
 
-	hlaileron = CreateControlSurface3(AIRCTRL_AILERON, 0.0911, 0.2, Axis_aileron_left_Location, AIRCTRL_AXIS_XNEG,1, anim_raileron);
+	hlaileron = CreateControlSurface3(AIRCTRL_AILERON, 3.0, 0.75, Axis_aileron_left_Location, AIRCTRL_AXIS_XNEG,1, anim_raileron);
 
-	hraileron = CreateControlSurface3(AIRCTRL_AILERON, 0.0911, 0.2, Axis_aileron_right_Location, AIRCTRL_AXIS_XPOS,1, anim_laileron);
+	hraileron = CreateControlSurface3(AIRCTRL_AILERON, 3.0, 0.75, Axis_aileron_right_Location, AIRCTRL_AXIS_XPOS,1, anim_laileron);
 
-	CreateControlSurface3(AIRCTRL_ELEVATOR, 0.8008, 0.2, Axis_elevator_Location, AIRCTRL_AXIS_XPOS, 1, anim_elevator);
+	CreateControlSurface3(AIRCTRL_ELEVATOR, 3.0, 0.75, _V( 0, 0.2, -3), AIRCTRL_AXIS_XPOS, 1, anim_elevator);
 
-	CreateControlSurface3(AIRCTRL_ELEVATORTRIM, 0.8008, 0.1, Axis_elevator_Location, AIRCTRL_AXIS_XPOS, 1, anim_elevator_trim);
+	//CreateControlSurface3(AIRCTRL_ELEVATORTRIM, 0.8008, 1, Axis_elevator_Location, AIRCTRL_AXIS_XPOS, 1, anim_elevator_trim);
+	SetTrimScale (0.2);
+	CreateControlSurface (AIRCTRL_ELEVATORTRIM, 3.0, 0.75, _V( 0, 0.2, -3), AIRCTRL_AXIS_XPOS, anim_elevator_trim);
 
-	CreateControlSurface3(AIRCTRL_RUDDER, 0.0924, 0.2, Axis_rudder_left_Location, AIRCTRL_AXIS_YPOS,
+	CreateControlSurface3(AIRCTRL_RUDDER, 3.0, 0.75, Axis_rudder_left_Location, AIRCTRL_AXIS_YPOS,
 	1, anim_left_rudder);
 
-	CreateControlSurface3(AIRCTRL_RUDDER, 0.0924, 0.2, Axis_rudder_right_Location, AIRCTRL_AXIS_YPOS,
+	CreateControlSurface3(AIRCTRL_RUDDER, 3.0, 0.75, Axis_rudder_right_Location, AIRCTRL_AXIS_YPOS,
 	1, anim_right_rudder);
 
 	//Add mesh
@@ -457,7 +467,7 @@ void AIRCAR::clbkLoadStateEx(FILEHANDLE scn, void *vs){
 	char *line;
 
 	while(oapiReadScenario_nextline(scn, line)){
-		if(!strncasecmp(line, "FOLDWING", 8)){
+		if(!_strnicmp(line, "FOLDWING", 8)){
 			sscanf(line+8, "%d%lf", (int *)&fold_status, &fold_aileron_proc);
 			SetAnimation(anim_FoldAileronLeftWing, fold_aileron_proc);
 		} else {

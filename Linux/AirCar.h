@@ -17,17 +17,22 @@ const double AIRCAR_FUELMASS = 100; //Fuel mass in kg.
 
 const double AIRCAR_ISP = 25e3; //Fuel-specific impulse in m/s.
 
-const double AIRCAR_MAXMAINTH = 16e3;
+const double AIRCAR_MAXMAINTH = 10e3;
 
 const VECTOR3 AIRCAR_CS = {6.43, 19.44, 3.69};
 
 const VECTOR3 AIRCAR_PMI = {2.33, 3.08, 1.53};
 
-const double AIRCAR_VLIFT_C = 1.2; //Chord lenght in meters.
+const VECTOR3 AIRCAR_RD = {5, 5, 5}; //Rotation drag coefficients.
 
-const double AIRCAR_VLIFT_S = 6.1407; //Wing area in m^2.
+const double AIRCAR_VLIFT_C = 4.8; //Chord lenght in meters.
+//const double AIRCAR_VLIFT_C = 1.2; //Chord lenght in meters.
 
-const double AIRCAR_VLIFT_A = 0.9696; //Wing aspect ratio.
+const double AIRCAR_VLIFT_S = 24.5628; //Wing area in m^2.
+//const double AIRCAR_VLIFT_S = 6.1407; //Wing area in m^2.
+
+const double AIRCAR_VLIFT_A = 1.211; //Wing aspect ratio.
+//const double AIRCAR_VLIFT_A = 4.26; //Wing aspect ratio.
 
 const double AIRCAR_HLIFT_C = 0.514; //Chord lenght in meters.
 
@@ -39,9 +44,9 @@ const double MECHANISM_OPERATING_SPEED = 0.25;
 
 static const int wheels = 14;
 static TOUCHDOWNVTX tdvtx_wheels[wheels] = {
-    {(TDP10_Location), 10e6, 1e5, 1.6, 1},
-    {(TDP3_Location), 1e6, 1e5, 1.6, 1},
-    {(TDP4_Location), 1e6, 1e5, 1.6, 1},
+    {(TDP10_Location), 1e6, 1e5, 1.6, 0.1},
+    {(TDP3_Location), 1e6, 1e5, 3.0, 0.2},
+    {(TDP4_Location), 1e6, 1e5, 3.0, 0.2},
     {(TDP1_Location), 2e4, 1e3, 3.0},
     {(TDP5_Location), 2e4, 1e3, 3.0},
     {(TDP6_Location), 2e4, 1e3, 3.0},
