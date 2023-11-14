@@ -17,7 +17,7 @@ const double AIRCAR_FUELMASS = 100; //Fuel mass in kg.
 
 const double AIRCAR_ISP = 25e3; //Fuel-specific impulse in m/s.
 
-const double AIRCAR_MAXMAINTH = 10e3;
+const double AIRCAR_MAXMAINTH = 8e3;
 
 const VECTOR3 AIRCAR_CS = {6.43, 19.44, 3.69};
 
@@ -41,6 +41,8 @@ const double AIRCAR_HLIFT_S = 0.3171; //Wing area in m^2.
 const double AIRCAR_HLIFT_A = 5.333; //Wing aspect ratio?.
 
 const double MECHANISM_OPERATING_SPEED = 0.25;
+
+const double PROPELLER_ROTATION_SPEED = 10;
 
 static const int wheels = 14;
 static TOUCHDOWNVTX tdvtx_wheels[wheels] = {
@@ -69,6 +71,8 @@ class AIRCAR: public VESSEL4{
 
         enum WingStowStatus {WS_DEPLOYED, WS_STOWED, WS_DEPLOYING, WS_STOWING} WingStow_status;
 
+        enum PropellerStatus {STOPPED, RUNNING, STOPPING, STARTING} Propeller_status;
+
         AIRCAR(OBJHANDLE hVessel, int flightmodel);
         virtual ~AIRCAR();
 
@@ -76,6 +80,7 @@ class AIRCAR: public VESSEL4{
         void UpdateFoldAnimation(double);
         void UpdateRotationAnimation(double);
         void UpdateStowAnimation(double);
+        void UpdatePropellerAnimation(double);
 
         void FoldWing(void);
         void ActivateFold(FoldWingStatus action);
@@ -83,15 +88,22 @@ class AIRCAR: public VESSEL4{
         void ActivateWingRotation(WingRotationStatus action);
         void StowWing(void);
         void ActivateStowWing(WingStowStatus action);
+        void ActivatePropeller(PropellerStatus action);
+        void runPropeller(void);
+        void ActivateBeacons(void);
+        void ActivateBrakeLights(void);
+        void LightsControl(void);
 
         void clbkSetClassCaps(FILEHANDLE cfg) override;
         void clbkLoadStateEx(FILEHANDLE scn, void *vs) override;
         void clbkSaveState(FILEHANDLE scn) override;
         void clbkPostStep(double, double, double) override;
+        void clbkPreStep(double, double, double) override;
         int clbkConsumeBufferedKey(int, bool, char *) override;
         //bool clbkLoadVC(int id) override;
 
         MESHHANDLE AIRCAR_vc;
+        THRUSTER_HANDLE th_main;
         unsigned int mesh_Cockpit;
 
     private:
@@ -105,15 +117,24 @@ class AIRCAR: public VESSEL4{
         unsigned int anim_FoldAileronLeftWing;
         unsigned int anim_RotateLeftWing;
         unsigned int anim_left_wing_stow;
+        unsigned int anim_propeller;
         
         double fold_aileron_proc;
         double rotate_left_wing_proc;
         double stow_left_wing_proc;
+        double propeller_proc;
 
         double wings_proc;
         
         AIRFOILHANDLE hwing;
         CTRLSURFHANDLE hlaileron, hraileron;
+        BEACONLIGHTSPEC beacon[2], brakelight[2];
+        LightEmitter *l1, *l2;
+
+        COLOUR4 col_d = {0.9,0.8,1,0};
+	    COLOUR4 col_s = {1.9,0.8,1,0};
+	    COLOUR4 col_a = {0,0,0,0};
+	    COLOUR4 col_white = {1,1,1,0};
 
 };
 

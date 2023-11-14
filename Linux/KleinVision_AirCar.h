@@ -1,5 +1,5 @@
 // Auto generated code file.  Blender: 3.3.9  Blender Tools: (2, 1, 2)
-// Date: Sun Nov  5 15:41:55 2023
+// Date: Mon Nov 13 21:25:55 2023
 
 
 #include "Orbitersdk.h"
@@ -57,9 +57,9 @@
     constexpr VECTOR3 Headlights_Location =     {-0.0056, 0.6552, 2.4872};
     constexpr VECTOR3 Wing_right_Location =     {2.3139, 0.5000, 0.3017};
     constexpr VECTOR3 Wheels_rear__Location =     {-0.0001, 0.1623, -1.1901};
-    constexpr VECTOR3 Brake_light_1_Location =     {-4.0374, 0.5003, 0.2516};
+    constexpr VECTOR3 Brake_light_1_Location =     {-0.8478, 0.9643, -2.9591};
     constexpr VECTOR3 Beacon1_Location =     {-4.0374, 0.5003, 0.1162};
-    constexpr VECTOR3 Brake_light_2_Location =     {4.0428, 0.5003, 0.2516};
+    constexpr VECTOR3 Brake_light_2_Location =     {0.8528, 0.9695, -2.9846};
     constexpr VECTOR3 Beacon2_Location =     {4.0428, 0.5003, 0.1162};
     constexpr VECTOR3 Light1_Location =     {-0.9458, 0.6832, 2.5686};
     constexpr VECTOR3 Light2_Location =     {0.9453, 0.6832, 2.5686};
