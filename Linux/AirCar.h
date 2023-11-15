@@ -6,6 +6,7 @@
 #include "VesselAPI.h"
 #include "Orbitersdk.h"
 #include "KleinVision_AirCar.h"
+#include "XRSound.h"
 
 const double WINGS_OPERATING_SPEED = 0.25;
 
@@ -25,13 +26,13 @@ const VECTOR3 AIRCAR_PMI = {2.33, 3.08, 1.53};
 
 const VECTOR3 AIRCAR_RD = {5, 5, 5}; //Rotation drag coefficients.
 
-const double AIRCAR_VLIFT_C = 4.8; //Chord lenght in meters.
-//const double AIRCAR_VLIFT_C = 1.2; //Chord lenght in meters.
+//const double AIRCAR_VLIFT_C = 4.8; //Chord lenght in meters.
+const double AIRCAR_VLIFT_C = 1.2; //Chord lenght in meters.
 
-const double AIRCAR_VLIFT_S = 24.5628; //Wing area in m^2.
+const double AIRCAR_VLIFT_S = 36; //Wing area in m^2.
 //const double AIRCAR_VLIFT_S = 6.1407; //Wing area in m^2.
 
-const double AIRCAR_VLIFT_A = 1.211; //Wing aspect ratio.
+const double AIRCAR_VLIFT_A = 1.778; //Wing aspect ratio.
 //const double AIRCAR_VLIFT_A = 4.26; //Wing aspect ratio.
 
 const double AIRCAR_HLIFT_C = 0.514; //Chord lenght in meters.
@@ -64,6 +65,8 @@ static TOUCHDOWNVTX tdvtx_wheels[wheels] = {
 //AIRCAR class interface
 class AIRCAR: public VESSEL4{
     public:
+
+        enum MySounds {engine_idle, engine, engine_far};
 
         enum FoldWingStatus {FW_DEPLOYED, FW_STOWED, FW_DEPLOYING, FW_STOWING} fold_status;
 
@@ -100,11 +103,14 @@ class AIRCAR: public VESSEL4{
         void clbkPostStep(double, double, double) override;
         void clbkPreStep(double, double, double) override;
         int clbkConsumeBufferedKey(int, bool, char *) override;
+        void clbkPostCreation(void) override;
         //bool clbkLoadVC(int id) override;
 
         MESHHANDLE AIRCAR_vc;
         THRUSTER_HANDLE th_main;
         unsigned int mesh_Cockpit;
+        XRSound *m_pXRSound;
+        bool eng_idle;
 
     private:
         unsigned int anim_left_rudder;

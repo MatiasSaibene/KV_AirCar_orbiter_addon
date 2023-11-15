@@ -22,6 +22,7 @@
 #include "AirCar.h"
 #include <algorithm>
 #include <cstdio>
+#include "XRSound.h"
 
 //Variable for lights control
 bool lights_on;
@@ -31,9 +32,14 @@ bool lights_on;
 void VLiftCoeff (VESSEL *v, double aoa, double M, double Re, void *context, double *cl, double *cm, double *cd)
 {
 	const int nabsc = 9;
-	static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -2*RAD, 0*RAD,2*RAD,25*RAD,60*RAD,180*RAD};
+	static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -15*RAD, 0*RAD,15*RAD,30*RAD,60*RAD,180*RAD};
+	static const double CL[nabsc]  = {   0,    -0.56,   -0.56,   -0.16,  0.15,  0.46,  0.56,  0.56,  0.00};
+	static const double CM[nabsc]  = {    0,    0.00,   0.00,     0.00,  0.00,  0.00,  0.00,  0.00,  0.00};
+
+	/* static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -2*RAD, 0*RAD,2*RAD,25*RAD,60*RAD,180*RAD};
 	static const double CL[nabsc]  = {    0,    -0.56,   -0,      -0,   0.15, 0.25, 0.56,  0.56,    0.00};
-	static const double CM[nabsc]  = {    0,   0.005,   0.004,   0.001, 0.000,-0.001,-0.004, 0.005,  0.00};
+	static const double CM[nabsc]  = {    0,   0.005,   0.004,   0.001, 0.000,-0.001,-0.004, 0.005,  0.00}; */
+
 	int i;
 	for (i = 0; i < nabsc-1 && AOA[i+1] < aoa; i++);
 	if (i < nabsc - 1) {
@@ -47,7 +53,7 @@ void VLiftCoeff (VESSEL *v, double aoa, double M, double Re, void *context, doub
 	}
 	double saoa = sin(aoa);
 	double pd = 0.015 + 0.4*saoa*saoa;  // profile drag
-	*cd = pd + oapiGetInducedDrag (*cl, AIRCAR_VLIFT_A, 0.7) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
+	*cd = pd + oapiGetInducedDrag (*cl, AIRCAR_VLIFT_A, 0.2) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
 	// profile drag + (lift-)induced drag + transonic/supersonic wave (compressibility) drag
 }
 
@@ -93,6 +99,8 @@ AIRCAR::AIRCAR(OBJHANDLE hVessel, int flightmodel) : VESSEL4(hVessel, flightmode
 //Destructor
 AIRCAR::~AIRCAR(){
 
+	delete m_pXRSound;
+
 }
 
 //Overloaded callback functions
@@ -119,8 +127,8 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 
 
 	//Main wings lift surfaces
-	hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 2, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
-	//hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 1.1359, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
+	hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 1.1359, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
+	//hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 2, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
 
 	CreateAirfoil3(LIFT_HORIZONTAL, (Elevators_mobile_parts_Location), HLiftCoeff, 0, AIRCAR_HLIFT_C, AIRCAR_HLIFT_S, AIRCAR_HLIFT_A);
 
@@ -593,6 +601,9 @@ void AIRCAR::ActivateStowWing(WingStowStatus action){
 
 void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
 
+	double alt = GetAltitude();
+
+
 	double pwr = GetThrusterLevel(th_main);
 	double prp = GetAnimation(anim_propeller);
 	double msimdt = simdt * PROPELLER_ROTATION_SPEED;
@@ -619,6 +630,28 @@ void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
   else
     vi:set_animation(anim_Prop)
   end*/
+	
+	if(1){
+		m_pXRSound->PlayWav(engine_idle, true, 1.0);
+	}
+
+	if(alt > 1500){
+		m_pXRSound->PlayWav(engine_far, false, 1.0);
+	}
+
+}
+
+void AIRCAR::clbkPostCreation(){
+
+	m_pXRSound = XRSound::CreateInstance(this);
+
+	m_pXRSound->LoadWav(engine_far, "XRSound\\KleinVision_AirCar\\engine_far.wav", XRSound::PlaybackType::Wind);
+
+	m_pXRSound->LoadWav(XRSound::MainEngines, "XRSound\\KleinVision_AirCar\\engine.wav", XRSound::PlaybackType::Global);
+	m_pXRSound->SetDefaultSoundEnabled(XRSound::MainEngines, "XRSound\\KleinVision_AirCar\\engine.wav");
+
+	m_pXRSound->LoadWav(engine_idle, "XRSound\\KleinVision_AirCar\\engine_idle.wav", XRSound::PlaybackType::BothViewClose);
+
 }
 
 void AIRCAR::clbkPostStep(double simt, double simdt, double mjd){
@@ -628,6 +661,7 @@ void AIRCAR::clbkPostStep(double simt, double simdt, double mjd){
 	UpdateStowAnimation(simdt);
 
 }
+
 
 ////////////Functions for animations
 
