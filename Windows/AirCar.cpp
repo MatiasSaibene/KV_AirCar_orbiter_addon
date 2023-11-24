@@ -8,6 +8,15 @@
 // Control module for AIRCAR vessel class
 //===========================================================
 
+//===============================================================
+//      I thank the users who helped me get this thing flying:
+//francisdrake
+//Thunder Chicken
+//Urwumpe
+//johnnymanly
+//===========================================================
+
+
 #define ORBITER_MODULE
 #include <cstring>
 #include <cstdint>
@@ -15,14 +24,22 @@
 #include <algorithm>
 #include <cstdio>
 
+//Variable for lights control
+bool lights_on;
+
 // 1. vertical lift component (wings and body)
 
 void VLiftCoeff (VESSEL *v, double aoa, double M, double Re, void *context, double *cl, double *cm, double *cd)
 {
 	const int nabsc = 9;
-	static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -2*RAD, 15*RAD,20*RAD,25*RAD,60*RAD,180*RAD};
-	static const double CL[nabsc]  = {       0,      0,   -0.4,      0,    0.7,     1,   0.8,     0,      0};
-	static const double CM[nabsc]  = {       0,      0,  0.014, 0.0039, -0.006,-0.008,-0.010,     0,      0};
+	static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -15*RAD, 0*RAD,15*RAD,30*RAD,60*RAD,180*RAD};
+	static const double CL[nabsc]  = {   0,    -0.56,   -0.56,   -0.16,  0.15,  0.46,  0.56,  0.56,  0.00};
+	static const double CM[nabsc]  = {    0,    0.00,   0.00,     0.00,  0.00,  0.00,  0.00,  0.00,  0.00};
+
+	/* static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -2*RAD, 0*RAD,2*RAD,25*RAD,60*RAD,180*RAD};
+	static const double CL[nabsc]  = {    0,    -0.56,   -0,      -0,   0.15, 0.25, 0.56,  0.56,    0.00};
+	static const double CM[nabsc]  = {    0,   0.005,   0.004,   0.001, 0.000,-0.001,-0.004, 0.005,  0.00}; */
+
 	int i;
 	for (i = 0; i < nabsc-1 && AOA[i+1] < aoa; i++);
 	if (i < nabsc - 1) {
@@ -36,7 +53,7 @@ void VLiftCoeff (VESSEL *v, double aoa, double M, double Re, void *context, doub
 	}
 	double saoa = sin(aoa);
 	double pd = 0.015 + 0.4*saoa*saoa;  // profile drag
-	*cd = pd + oapiGetInducedDrag (*cl, 1.5, 0.7) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
+	*cd = pd + oapiGetInducedDrag (*cl, AIRCAR_VLIFT_A, 0.2) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
 	// profile drag + (lift-)induced drag + transonic/supersonic wave (compressibility) drag
 }
 
@@ -56,7 +73,7 @@ void HLiftCoeff (VESSEL *v, double beta, double M, double Re, void *context, dou
 		*cl = CL[nabsc - 1];
 	}
 	*cm = 0.0;
-	*cd = 0.015 + oapiGetInducedDrag (*cl, 1.5, 0.6) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
+	*cd = 0.015 + oapiGetInducedDrag (*cl, AIRCAR_HLIFT_A, 0.6) + oapiGetWaveDrag (M, 0.75, 1.0, 1.1, 0.04);
 }
 
 
@@ -82,13 +99,16 @@ AIRCAR::AIRCAR(OBJHANDLE hVessel, int flightmodel) : VESSEL4(hVessel, flightmode
 //Destructor
 AIRCAR::~AIRCAR(){
 
+	//Delete XRSound
+	delete m_pXRSound;
+	
 }
 
 //Overloaded callback functions
 //Set the capabilities of the vessel class
 void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 
-	THRUSTER_HANDLE th_main;
+	//THRUSTER_HANDLE th_main;
 
     //Physical vessel resources
     SetSize(AIRCAR_SIZE);
@@ -96,6 +116,7 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
     SetMaxWheelbrakeForce(2e5);
 	SetCrossSections(AIRCAR_CS);
 	SetPMI(AIRCAR_PMI);
+	SetRotDrag(AIRCAR_RD);
 	SetTouchdownPoints(tdvtx_wheels, wheels);
 
 	//Propellant resources
@@ -107,29 +128,72 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 
 
 	//Main wings lift surfaces
-	hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 0, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
+	hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 1.1359, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
+	//hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 2, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
 
 	CreateAirfoil3(LIFT_HORIZONTAL, (Elevators_mobile_parts_Location), HLiftCoeff, 0, AIRCAR_HLIFT_C, AIRCAR_HLIFT_S, AIRCAR_HLIFT_A);
 
 
 	//Control surfaces...
 
-	hlaileron = CreateControlSurface3(AIRCTRL_AILERON, 0.0911, 0.2, Axis_aileron_left_Location, AIRCTRL_AXIS_XNEG,1, anim_raileron);
+	hlaileron = CreateControlSurface3(AIRCTRL_AILERON, 3.0, 0.35, (Axis_aileron_left_Location), AIRCTRL_AXIS_XNEG,1, anim_raileron);
 
-	hraileron = CreateControlSurface3(AIRCTRL_AILERON, 0.0911, 0.2, Axis_aileron_right_Location, AIRCTRL_AXIS_XPOS,1, anim_laileron);
+	hraileron = CreateControlSurface3(AIRCTRL_AILERON, 3.0, 0.35, (Axis_aileron_right_Location), AIRCTRL_AXIS_XPOS,1, anim_laileron);
 
-	CreateControlSurface3(AIRCTRL_ELEVATOR, 0.8008, 0.2, Axis_elevator_Location, AIRCTRL_AXIS_XPOS, 1, anim_elevator);
+	//CreateControlSurface3(AIRCTRL_ELEVATOR, 3.0, 0.35, _V( 0, 0.2, -3), AIRCTRL_AXIS_XPOS, 1, anim_elevator);
 
-	CreateControlSurface3(AIRCTRL_ELEVATORTRIM, 0.8008, 0.1, Axis_elevator_Location, AIRCTRL_AXIS_XPOS, 1, anim_elevator_trim);
+	CreateControlSurface3(AIRCTRL_ELEVATOR, 3.0, 0.35, (Axis_elevator_Location), AIRCTRL_AXIS_XPOS, 1, anim_elevator);
 
-	CreateControlSurface3(AIRCTRL_RUDDER, 0.0924, 0.2, Axis_rudder_left_Location, AIRCTRL_AXIS_YPOS,
+	CreateControlSurface3(AIRCTRL_ELEVATORTRIM, 3.0, 0.35, (Axis_elevator_Location), AIRCTRL_AXIS_XPOS, 1, anim_elevator_trim);
+
+	//SetTrimScale (0.2);
+	//CreateControlSurface (AIRCTRL_ELEVATORTRIM, 3.0, 0.35, _V( 0, 0.2, -3), AIRCTRL_AXIS_XPOS, anim_elevator_trim);
+
+	CreateControlSurface3(AIRCTRL_RUDDER, 3.0, 0.35, (Axis_rudder_left_Location), AIRCTRL_AXIS_YPOS,
 	1, anim_left_rudder);
 
-	CreateControlSurface3(AIRCTRL_RUDDER, 0.0924, 0.2, Axis_rudder_right_Location, AIRCTRL_AXIS_YPOS,
+	CreateControlSurface3(AIRCTRL_RUDDER, 3.0, 0.35, (Axis_rudder_right_Location), AIRCTRL_AXIS_YPOS,
 	1, anim_right_rudder);
 
 	//Add mesh
 	AddMesh("KleinVision_AirCar");
+
+	//Define beacons
+
+	static VECTOR3 beaconpos[2] = {{Beacon1_Location}, {Beacon2_Location}};
+	static VECTOR3 beaconcol = {0, 1, 0};
+
+	for(int i = 0; i < 2; i++){
+		beacon[i].shape = BEACONSHAPE_STAR;
+		beacon[i].pos = beaconpos+i;
+		beacon[i].col = &beaconcol;
+		beacon[i].size = 0.25;
+		beacon[i].falloff = 0.4;
+		beacon[i].period = 1;
+		beacon[i].duration = 0.1;
+		beacon[i].tofs = 0.2;
+		beacon[i].active = false;
+		AddBeacon(beacon+i);
+	}
+
+	//Define brake lights (more beacons)
+
+	static VECTOR3 brakelights[2] = {{Brake_light_1_Location}, {Brake_light_2_Location}};
+	static VECTOR3 brakelightscolor = {1, 0, 0};
+
+	for(int i = 0; i < 2; i++){
+		brakelight[i].shape = BEACONSHAPE_DIFFUSE;
+		brakelight[i].pos = brakelights+i;
+		brakelight[i].col = &brakelightscolor;
+		brakelight[i].size = 0.25;
+		brakelight[i].falloff = 0.4;
+		brakelight[i].period = 0;
+		brakelight[i].duration = 0.1;
+		brakelight[i].tofs = 0.2;
+		brakelight[i].active = false;
+		AddBeacon(brakelight+i);
+	}
+
 }
 
 
@@ -447,6 +511,47 @@ void AIRCAR::DefineAnimations(void){
 
 	anim_raileron = CreateAnimation(0.5);
 	AddAnimationComponent(anim_raileron, 0, 1, &RAileron);
+
+	////Misc animations
+	
+	static unsigned int RotPropellerGrp[1] = {Propeller_Id};
+	static MGROUP_ROTATE RotPropeller(
+		0,
+		RotPropellerGrp,
+		1,
+		(Propeller_Location),
+		_V(0, 0, 1),
+		(float)(360*RAD)
+	);
+	
+	anim_propeller = CreateAnimation(0.0);
+	AddAnimationComponent(anim_propeller, 0, 1, &RotPropeller);
+
+	//wheels rotation
+	static unsigned int FrontWheelsRotateGrp[1] = {Wheels_front_Id};
+	static MGROUP_ROTATE FrontWheelsRotate(
+		0,
+		FrontWheelsRotateGrp,
+		1,
+		(Wheels_front_Location),
+		_V(1, 0, 0),
+		(float)(360*RAD)
+	);
+
+	anim_wheels = CreateAnimation(0.0);
+	AddAnimationComponent(anim_wheels, 0, 1, &FrontWheelsRotate);
+
+	static unsigned int RearWheelsRotateGrp[1] = {Wheels_rear_Id};
+	static MGROUP_ROTATE RearWheelsRotate(
+		0,
+		RearWheelsRotateGrp,
+		1,
+		(Wheels_rear_Location),
+		_V(1, 0, 0),
+		(float)(360*RAD)
+	);
+
+	AddAnimationComponent(anim_wheels, 0, 1, &RearWheelsRotate);
 }
 
 ///////////Load status from scenario file
@@ -457,8 +562,14 @@ void AIRCAR::clbkLoadStateEx(FILEHANDLE scn, void *vs){
 
 	while(oapiReadScenario_nextline(scn, line)){
 		if(!_strnicmp(line, "FOLDWING", 8)){
-			sscanf(line+8, "%d%lf", (int *)&fold_status, &fold_aileron_proc);
+			sscanf_s(line+8, "%d%lf", (int *)&fold_status, &fold_aileron_proc);
 			SetAnimation(anim_FoldAileronLeftWing, fold_aileron_proc);
+		} else if(!_strnicmp(line, "ROTATEDWINGS", 12)){
+			sscanf_s(line+12, "%d%lf", (int *)&WingRotation_status, &rotate_left_wing_proc);
+			SetAnimation(anim_RotateLeftWing, rotate_left_wing_proc);
+		} else if(!_strnicmp(line, "WINGSSTOWED", 11)){
+			sscanf_s(line+11, "%d%lf", (int *)&WingStow_status, &stow_left_wing_proc);
+			SetAnimation(anim_left_wing_stow, stow_left_wing_proc);
 		} else {
 			ParseScenarioLineEx(line, vs);
 		}
@@ -470,8 +581,15 @@ void AIRCAR::clbkSaveState(FILEHANDLE scn){
 	char cbuf[256];
 
 	SaveDefaultState(scn);
+
 	sprintf(cbuf, "%d %0.4f", fold_status, fold_aileron_proc);
 	oapiWriteScenario_string(scn, "FOLDWING", cbuf);
+	
+	sprintf(cbuf, "%d %0.4f", WingRotation_status, rotate_left_wing_proc);
+	oapiWriteScenario_string(scn, "ROTATEDWINGS", cbuf);
+
+	sprintf(cbuf, "%d %0.4f", WingStow_status, stow_left_wing_proc);
+	oapiWriteScenario_string(scn, "WINGSSTOWED", cbuf);
 }
 
 ////////////Logic for trigger animations
@@ -505,7 +623,67 @@ void AIRCAR::ActivateStowWing(WingStowStatus action){
 	WingStow_status = action;
 }
 
+
 ////////////Running animations...
+
+void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
+
+	double alt = GetAltitude();
+	double grnspd = GetGroundspeed();
+
+
+	double pwr = GetThrusterLevel(th_main);
+	double prp = GetAnimation(anim_propeller);
+	double msimdt = simdt * PROPELLER_ROTATION_SPEED;
+	double da = msimdt * 0.1 + (pwr * 0.1);
+
+	propeller_proc = prp + da;
+
+	if(prp < 1){
+		SetAnimation(anim_propeller, propeller_proc);
+		SetAnimation(anim_wheels, propeller_proc);
+	} else {
+		SetAnimation(anim_propeller, 0.0);
+		SetAnimation(anim_wheels, 0.0);
+	}
+
+//Thanks johnnymanly
+/*pwr = vi:get_thrusterlevel(thmain)
+  prp = vi:get_animation(anim_Prop)
+  da = simdt * 0.1 + (pwr * 0.1)
+  prp_proc = prp + da
+
+  if
+    prp < 1
+  then
+    vi:set_animation(anim_Prop,prp_proc)
+  else
+    vi:set_animation(anim_Prop)
+  end*/
+	
+	if(1){
+		m_pXRSound->PlayWav(engine_idle, true, 1.0);
+	}
+
+	if(alt > 1500){
+		m_pXRSound->PlayWav(engine_far, false, 1.0);
+	}
+}
+
+void AIRCAR::clbkPostCreation(){
+
+	m_pXRSound = XRSound::CreateInstance(this);
+
+	m_pXRSound->LoadWav(engine_far, "XRSound\\KleinVision_AirCar\\engine_far.wav", XRSound::PlaybackType::Wind);
+
+	m_pXRSound->LoadWav(XRSound::MainEngines, "XRSound\\KleinVision_AirCar\\engine.wav", XRSound::PlaybackType::Global);
+	m_pXRSound->SetDefaultSoundEnabled(XRSound::MainEngines, "XRSound\\KleinVision_AirCar\\engine.wav");
+
+	m_pXRSound->LoadWav(engine_idle, "XRSound\\KleinVision_AirCar\\engine_idle.wav", XRSound::PlaybackType::BothViewClose);
+
+	m_pXRSound->LoadWav(rotate, "XRSound\\Default\\Rotate.wav", XRSound::PlaybackType::Global);
+
+}
 
 void AIRCAR::clbkPostStep(double simt, double simdt, double mjd){
 
@@ -514,6 +692,7 @@ void AIRCAR::clbkPostStep(double simt, double simdt, double mjd){
 	UpdateStowAnimation(simdt);
 
 }
+
 
 ////////////Functions for animations
 
@@ -542,6 +721,7 @@ void AIRCAR::UpdateRotationAnimation(double simdt){
         if (WingRotation_status == WR_DEPLOYING) {
             if (rotate_left_wing_proc > 0.0) rotate_left_wing_proc = max(0.0, rotate_left_wing_proc - da);
             else WingRotation_status = WR_DEPLOYED;
+			ActivateBeacons();
         } else {
             if (rotate_left_wing_proc < 1.0) rotate_left_wing_proc = min(1.0, rotate_left_wing_proc + da);
             else WingRotation_status = WR_STOWED;
@@ -558,14 +738,73 @@ void AIRCAR::UpdateStowAnimation(double simdt){
         if (WingStow_status == WS_DEPLOYING) {
             if (stow_left_wing_proc > 0.0) stow_left_wing_proc = max(0.0, stow_left_wing_proc - da);
             else WingStow_status = WS_DEPLOYED;
+			ActivateBrakeLights();
         } else {
             if (stow_left_wing_proc < 1.0) stow_left_wing_proc = min(1.0, stow_left_wing_proc + da);
             else WingStow_status = WS_STOWED;
+			ActivateBrakeLights();
         }
         SetAnimation(anim_left_wing_stow, stow_left_wing_proc);
     }
 }
 
+/*
+void AIRCAR::UpdatePropellerAnimation(double simdt){
+
+	if(Propeller_status >= STOPPING){
+
+		double da = simdt * PROPELLER_ROTATION_SPEED;
+
+		if(Propeller_status == STOPPING){
+			if(propeller_proc > 0.0) propeller_proc = max(0.0, propeller_proc - da);
+			else Propeller_status = STOPPED;
+		} else {
+			if(propeller_proc < 1.0) propeller_proc = min(1.0, propeller_proc + da);
+			else Propeller_status = RUNNING;
+		}
+		SetAnimation(anim_propeller, propeller_proc);
+	}
+
+}
+*/
+
+void AIRCAR::ActivateBeacons(void){
+
+	for(int i = 0; i < 2; i++){
+		if(!beacon[i].active){
+				beacon[i].active = true;
+		} else {
+				beacon[i].active = false;
+		}
+	}
+
+}
+
+void AIRCAR::ActivateBrakeLights(void){
+
+	for(int i = 0; i < 2; i++){
+		if(!brakelight[i].active){
+			brakelight[i].active = true;
+		} else {
+			brakelight[i].active = false;
+		}
+	}
+
+}
+
+void AIRCAR::LightsControl(void){
+
+	if(!lights_on){
+		l1 = AddSpotLight((Light1_Location), _V(0, 0, 1), 1000, 1e-3, 0, 2e-3, 25*RAD, 45*RAD, col_d, col_s, col_a);
+		l2 = AddSpotLight((Light2_Location), _V(0, 0, 1), 1000, 1e-3, 0, 2e-3, 25*RAD, 45*RAD, col_d, col_s, col_a);
+		lights_on = true;
+	} else {
+		DelLightEmitter(l1);
+		DelLightEmitter(l2);
+		lights_on = false;
+	}
+
+}
 
 int AIRCAR::clbkConsumeBufferedKey(DWORD key, bool down, char *kstate){
 
@@ -579,6 +818,14 @@ int AIRCAR::clbkConsumeBufferedKey(DWORD key, bool down, char *kstate){
 	}
 	if(key == OAPI_KEY_3 && down){
 		StowWing();
+		return 1;
+	}
+	if(key == OAPI_KEY_B && down){
+		ActivateBeacons();
+		return 1;
+	}
+	if(key == OAPI_KEY_F && down){
+		LightsControl();
 		return 1;
 	}
 	return 0;

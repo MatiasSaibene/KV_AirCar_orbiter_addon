@@ -39,7 +39,7 @@ const double AIRCAR_HLIFT_C = 0.514; //Chord lenght in meters.
 
 const double AIRCAR_HLIFT_S = 0.3171; //Wing area in m^2.
 
-const double AIRCAR_HLIFT_A = 5.333; //Wing aspect ratio?.
+const double AIRCAR_HLIFT_A = 0.0155; //Wing aspect ratio?.
 
 const double MECHANISM_OPERATING_SPEED = 0.25;
 
@@ -66,7 +66,7 @@ static TOUCHDOWNVTX tdvtx_wheels[wheels] = {
 class AIRCAR: public VESSEL4{
     public:
 
-        enum MySounds {engine_idle, engine, engine_far};
+        enum MySounds {engine_idle, engine, engine_far, rotate};
 
         enum FoldWingStatus {FW_DEPLOYED, FW_STOWED, FW_DEPLOYING, FW_STOWING} fold_status;
 
@@ -110,7 +110,6 @@ class AIRCAR: public VESSEL4{
         THRUSTER_HANDLE th_main;
         unsigned int mesh_Cockpit;
         XRSound *m_pXRSound;
-        bool eng_idle;
 
     private:
         unsigned int anim_left_rudder;
@@ -124,6 +123,7 @@ class AIRCAR: public VESSEL4{
         unsigned int anim_RotateLeftWing;
         unsigned int anim_left_wing_stow;
         unsigned int anim_propeller;
+        unsigned int anim_wheels;
         
         double fold_aileron_proc;
         double rotate_left_wing_proc;

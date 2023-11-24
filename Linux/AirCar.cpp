@@ -99,8 +99,9 @@ AIRCAR::AIRCAR(OBJHANDLE hVessel, int flightmodel) : VESSEL4(hVessel, flightmode
 //Destructor
 AIRCAR::~AIRCAR(){
 
+	//Delete XRSound
 	delete m_pXRSound;
-
+	
 }
 
 //Overloaded callback functions
@@ -525,6 +526,32 @@ void AIRCAR::DefineAnimations(void){
 	
 	anim_propeller = CreateAnimation(0.0);
 	AddAnimationComponent(anim_propeller, 0, 1, &RotPropeller);
+
+	//wheels rotation
+	static unsigned int FrontWheelsRotateGrp[1] = {Wheels_front_Id};
+	static MGROUP_ROTATE FrontWheelsRotate(
+		0,
+		FrontWheelsRotateGrp,
+		1,
+		(Wheels_front_Location),
+		_V(1, 0, 0),
+		(float)(360*RAD)
+	);
+
+	anim_wheels = CreateAnimation(0.0);
+	AddAnimationComponent(anim_wheels, 0, 1, &FrontWheelsRotate);
+
+	static unsigned int RearWheelsRotateGrp[1] = {Wheels_rear_Id};
+	static MGROUP_ROTATE RearWheelsRotate(
+		0,
+		RearWheelsRotateGrp,
+		1,
+		(Wheels_rear_Location),
+		_V(1, 0, 0),
+		(float)(360*RAD)
+	);
+
+	AddAnimationComponent(anim_wheels, 0, 1, &RearWheelsRotate);
 }
 
 ///////////Load status from scenario file
@@ -602,6 +629,7 @@ void AIRCAR::ActivateStowWing(WingStowStatus action){
 void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
 
 	double alt = GetAltitude();
+	double grnspd = GetGroundspeed();
 
 
 	double pwr = GetThrusterLevel(th_main);
@@ -613,8 +641,10 @@ void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
 
 	if(prp < 1){
 		SetAnimation(anim_propeller, propeller_proc);
+		SetAnimation(anim_wheels, propeller_proc);
 	} else {
-		SetAnimation(anim_propeller, 0);
+		SetAnimation(anim_propeller, 0.0);
+		SetAnimation(anim_wheels, 0.0);
 	}
 
 //Thanks johnnymanly
@@ -638,7 +668,6 @@ void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
 	if(alt > 1500){
 		m_pXRSound->PlayWav(engine_far, false, 1.0);
 	}
-
 }
 
 void AIRCAR::clbkPostCreation(){
@@ -651,6 +680,8 @@ void AIRCAR::clbkPostCreation(){
 	m_pXRSound->SetDefaultSoundEnabled(XRSound::MainEngines, "XRSound\\KleinVision_AirCar\\engine.wav");
 
 	m_pXRSound->LoadWav(engine_idle, "XRSound\\KleinVision_AirCar\\engine_idle.wav", XRSound::PlaybackType::BothViewClose);
+
+	m_pXRSound->LoadWav(rotate, "XRSound\\Default\\Rotate.wav", XRSound::PlaybackType::Global);
 
 }
 
@@ -764,8 +795,8 @@ void AIRCAR::ActivateBrakeLights(void){
 void AIRCAR::LightsControl(void){
 
 	if(!lights_on){
-		l1 = AddSpotLight((Light1_Location), _V(0, 0, 1), 100, 1e-3, 0, 2e-3, 25*RAD, 45*RAD, col_d, col_s, col_a);
-		l2 = AddSpotLight((Light2_Location), _V(0, 0, 1), 100, 1e-3, 0, 2e-3, 25*RAD, 45*RAD, col_d, col_s, col_a);
+		l1 = AddSpotLight((Light1_Location), _V(0, 0, 1), 1000, 1e-3, 0, 2e-3, 25*RAD, 45*RAD, col_d, col_s, col_a);
+		l2 = AddSpotLight((Light2_Location), _V(0, 0, 1), 1000, 1e-3, 0, 2e-3, 25*RAD, 45*RAD, col_d, col_s, col_a);
 		lights_on = true;
 	} else {
 		DelLightEmitter(l1);
