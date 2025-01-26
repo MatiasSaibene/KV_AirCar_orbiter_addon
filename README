@@ -1,0 +1,16 @@
+First of all I want to clarify that this add-on is not finished. Bugs need to be fixed and a virtual cabin needs to be added and textures improved, etc. But I wanted to publish it to have one more add-on available (especially for Linux).
+
+How to install:
+Simply drag the contents (that is, the Config, Images, Meshes, Modules, Scenarios, Orbitersdk and Textures folders) from the folder that corresponds to your operating system to the main Orbiter folder.
+
+How to stow/deploy the wings:
+if the wings are deployed press the key 1, wait to movement to complete, press key 2, wait, and finally press key 3. Do the same in reverse order (3-2-1) to deploy the wings. Also you can turn on/off the headlights by pressing F and the beacons by pressing B.
+
+How to take off:
+The first thing is obviously to accelerate, and once you hear the call "100 knots" start the rotation/pitch up maneuver immediately.
+
+I warn you that it is a little difficult to fly since it was difficult for me to program the flight controls and I am not very good at programming.
+
+Anyway, if you liked it, you can leave me a comment in the Orbiter Forum.
+
+KleinVision AirCar for OpenOrbiter is licensed under the terms of the MIT license. You can find the source code inside the Orbitersdk/samples/KleinVision_AirCar folder.
