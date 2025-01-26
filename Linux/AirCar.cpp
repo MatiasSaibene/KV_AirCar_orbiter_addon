@@ -16,25 +16,28 @@
 //johnnymanly
 //===========================================================
 
+#include <cmath>
 #define ORBITER_MODULE
 #include <cstring>
-#include <cstdint>
 #include "AirCar.h"
 #include <algorithm>
 #include <cstdio>
 #include "XRSound.h"
 
-//Variable for lights control
-bool lights_on;
+
 
 // 1. vertical lift component (wings and body)
 
 void VLiftCoeff (VESSEL *v, double aoa, double M, double Re, void *context, double *cl, double *cm, double *cd)
 {
 	const int nabsc = 9;
-	static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -15*RAD, 0*RAD,15*RAD,30*RAD,60*RAD,180*RAD};
+
+	static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -2*RAD, 15*RAD,20*RAD,25*RAD,60*RAD,180*RAD};
+	static const double CL[nabsc]  = {       0,      0,   -0.4,      0,    0.7,     1,   0.8,     0,      0};
+	static const double CM[nabsc]  = {       0,      0,  0.014, 0.0039, -0.006,-0.008,-0.010,     0,      0};
+	/* static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -15*RAD, 0*RAD,15*RAD,30*RAD,60*RAD,180*RAD};
 	static const double CL[nabsc]  = {   0,    -0.56,   -0.56,   -0.16,  0.15,  0.46,  0.56,  0.56,  0.00};
-	static const double CM[nabsc]  = {    0,    0.00,   0.00,     0.00,  0.00,  0.00,  0.00,  0.00,  0.00};
+	static const double CM[nabsc]  = {    0,    0.00,   0.00,     0.00,  0.00,  0.00,  0.00,  0.00,  0.00}; */
 
 	/* static const double AOA[nabsc] = {-180*RAD,-60*RAD,-30*RAD, -2*RAD, 0*RAD,2*RAD,25*RAD,60*RAD,180*RAD};
 	static const double CL[nabsc]  = {    0,    -0.56,   -0,      -0,   0.15, 0.25, 0.56,  0.56,    0.00};
@@ -94,6 +97,50 @@ AIRCAR::AIRCAR(OBJHANDLE hVessel, int flightmodel) : VESSEL4(hVessel, flightmode
 
 	WingStow_status = WS_DEPLOYED;
 
+	showHelp = false;
+
+	Propeller_status = STOPPED;
+
+	m_pXRSound = nullptr;
+
+	propeller_proc = 0.0;
+
+	wings_proc = 0.0;
+
+	hwing = nullptr;
+
+	mh_AirCar = nullptr;
+
+	mh_AirCar_VC = nullptr;
+
+	uimesh_AirCar = 0;
+
+	uimesh_Cockpit = 0;
+
+	hlaileron = nullptr;
+
+	hraileron = nullptr;
+
+	for(int i = 0; i < 2; i++){
+		beacon[i] = {0};
+	}
+
+	for(int i = 0; i < 2; i++){
+		brakelight[i] = {0};
+	}
+
+	l1 = nullptr;
+
+	l2 = nullptr;
+
+	helpmsg1 = nullptr;
+	helpmsg2 = nullptr;
+	helpmsg3 = nullptr;
+	helpmsg4 = nullptr;
+	helpmsg5 = nullptr;
+
+	th_main = nullptr;
+	
 }
 
 //Destructor
@@ -108,7 +155,8 @@ AIRCAR::~AIRCAR(){
 //Set the capabilities of the vessel class
 void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 
-	//THRUSTER_HANDLE th_main;
+	mh_AirCar = oapiLoadMeshGlobal(MESH_NAME);
+	uimesh_AirCar = AddMesh(mh_AirCar);
 
     //Physical vessel resources
     SetSize(AIRCAR_SIZE);
@@ -123,13 +171,12 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 	PROPELLANT_HANDLE GAS = CreatePropellantResource(AIRCAR_FUELMASS);
 
 	//Main engine
-	th_main = CreateThruster((Propeller_Location), _V(0, 0, 1), AIRCAR_MAXMAINTH, GAS, AIRCAR_ISP);
+	th_main = CreateThruster((Engine_Location), _V(0, 0, 1), AIRCAR_MAXMAINTH, GAS, AIRCAR_ISP);
 	CreateThrusterGroup(&th_main, 1, THGROUP_MAIN);
 
 
 	//Main wings lift surfaces
 	hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 1.1359, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
-	//hwing = CreateAirfoil3(LIFT_VERTICAL, _V(0, 2, 0), VLiftCoeff, 0, AIRCAR_VLIFT_C, AIRCAR_VLIFT_S, AIRCAR_VLIFT_A);
 
 	CreateAirfoil3(LIFT_HORIZONTAL, (Elevators_mobile_parts_Location), HLiftCoeff, 0, AIRCAR_HLIFT_C, AIRCAR_HLIFT_S, AIRCAR_HLIFT_A);
 
@@ -140,23 +187,15 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 
 	hraileron = CreateControlSurface3(AIRCTRL_AILERON, 3.0, 0.35, (Axis_aileron_right_Location), AIRCTRL_AXIS_XPOS,1, anim_laileron);
 
-	//CreateControlSurface3(AIRCTRL_ELEVATOR, 3.0, 0.35, _V( 0, 0.2, -3), AIRCTRL_AXIS_XPOS, 1, anim_elevator);
+	CreateControlSurface3(AIRCTRL_ELEVATOR, 3.0*2, 1, (Axis_elevator_Location), AIRCTRL_AXIS_XPOS, 1, anim_elevator);
 
-	CreateControlSurface3(AIRCTRL_ELEVATOR, 3.0, 0.35, (Axis_elevator_Location), AIRCTRL_AXIS_XPOS, 1, anim_elevator);
-
-	CreateControlSurface3(AIRCTRL_ELEVATORTRIM, 3.0, 0.35, (Axis_elevator_Location), AIRCTRL_AXIS_XPOS, 1, anim_elevator_trim);
-
-	//SetTrimScale (0.2);
-	//CreateControlSurface (AIRCTRL_ELEVATORTRIM, 3.0, 0.35, _V( 0, 0.2, -3), AIRCTRL_AXIS_XPOS, anim_elevator_trim);
+	CreateControlSurface3(AIRCTRL_ELEVATORTRIM, 3.0*2, 0.5, (Axis_elevator_Location), AIRCTRL_AXIS_XPOS, 1, anim_elevator_trim);
 
 	CreateControlSurface3(AIRCTRL_RUDDER, 3.0, 0.35, (Axis_rudder_left_Location), AIRCTRL_AXIS_YPOS,
 	1, anim_left_rudder);
 
 	CreateControlSurface3(AIRCTRL_RUDDER, 3.0, 0.35, (Axis_rudder_right_Location), AIRCTRL_AXIS_YPOS,
 	1, anim_right_rudder);
-
-	//Add mesh
-	AddMesh("KleinVision_AirCar");
 
 	//Define beacons
 
@@ -194,6 +233,7 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 		AddBeacon(brakelight+i);
 	}
 
+	MakeAnnotationFormat();
 }
 
 
@@ -623,7 +663,6 @@ void AIRCAR::ActivateStowWing(WingStowStatus action){
 	WingStow_status = action;
 }
 
-
 ////////////Running animations...
 
 void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
@@ -668,6 +707,8 @@ void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
 	if(alt > 1500){
 		m_pXRSound->PlayWav(engine_far, false, 1.0);
 	}
+
+	SetAnnotationHelp();
 }
 
 void AIRCAR::clbkPostCreation(){
@@ -806,6 +847,73 @@ void AIRCAR::LightsControl(void){
 
 }
 
+void AIRCAR::SetAnnotationHelp(){
+
+	const char *title = "";
+	const char *subtitle = "";
+
+	const char *hlpbeacons = "";
+	const char *hlplights = "";
+
+	const char *hlphelp = "";
+
+	if(showHelp == true){
+		title = ">>>KleinVision AirCar<<<";
+		subtitle = "Key help";
+
+		hlpbeacons = "Press B to activate beacons";
+		hlplights = "Press F to activate lights";
+
+		hlphelp = "Press H to display/hide this help";
+
+	} else {
+
+		title = "";
+		subtitle = "";
+
+		hlpbeacons = "";
+		hlplights = "";
+		hlphelp = "";
+
+	}
+
+	oapiAnnotationSetText(helpmsg1, title);
+	oapiAnnotationSetText(helpmsg2, subtitle);
+
+	oapiAnnotationSetText(helpmsg3, hlpbeacons);
+	oapiAnnotationSetText(helpmsg4, hlplights);
+	oapiAnnotationSetText(helpmsg5, hlphelp);
+}
+
+void AIRCAR::MakeAnnotationFormat(){
+
+	helpmsg1 = oapiCreateAnnotation(true, 1.75, _V(0, 1,0));
+	oapiAnnotationSetPos(helpmsg1, 0.3, 0.1, 0.75, 0.12);
+
+	helpmsg2 = oapiCreateAnnotation(true, 1.5, _V(0, 1, 0));
+	oapiAnnotationSetPos(helpmsg2, 0.4, 0.15, 0.75, 0.16);
+
+
+
+	helpmsg3 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
+	oapiAnnotationSetPos(helpmsg3, 0.3, 0.25, 0.75, 0.30);
+
+	helpmsg4 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
+	oapiAnnotationSetPos(helpmsg4, 0.3, 0.32, 0.75, 0.38);
+
+	helpmsg5 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
+	oapiAnnotationSetPos(helpmsg5, 0.3, 0.40, 0.75, 0.44);
+
+
+}
+
+int AIRCAR::clbkConsumeDirectKey(char *kstate){
+
+
+	return 0;
+	
+}
+
 int AIRCAR::clbkConsumeBufferedKey(int key, bool down, char *kstate){
 
 	if(key == OAPI_KEY_1 && down){
@@ -827,6 +935,14 @@ int AIRCAR::clbkConsumeBufferedKey(int key, bool down, char *kstate){
 	if(key == OAPI_KEY_F && down){
 		LightsControl();
 		return 1;
+	}
+
+	if(key == OAPI_KEY_H && down){
+		if(!showHelp){
+			showHelp = true;
+		} else {
+			showHelp = false;
+		}
 	}
 	return 0;
 }

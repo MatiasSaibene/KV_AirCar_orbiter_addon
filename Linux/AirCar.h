@@ -16,7 +16,7 @@ const double AIRCAR_EMPTYMASS = 1100; //Empty mass in kg.
 
 const double AIRCAR_FUELMASS = 100; //Fuel mass in kg.
 
-const double AIRCAR_ISP = 25e3; //Fuel-specific impulse in m/s.
+const double AIRCAR_ISP = 75e3; //Fuel-specific impulse in m/s.
 
 const double AIRCAR_MAXMAINTH = 8e3;
 
@@ -24,7 +24,7 @@ const VECTOR3 AIRCAR_CS = {6.43, 19.44, 3.69};
 
 const VECTOR3 AIRCAR_PMI = {2.33, 3.08, 1.53};
 
-const VECTOR3 AIRCAR_RD = {5, 5, 5}; //Rotation drag coefficients.
+const VECTOR3 AIRCAR_RD = {1, 1, 1}; //Rotation drag coefficients.
 
 //const double AIRCAR_VLIFT_C = 4.8; //Chord lenght in meters.
 const double AIRCAR_VLIFT_C = 1.2; //Chord lenght in meters.
@@ -47,9 +47,9 @@ const double PROPELLER_ROTATION_SPEED = 10;
 
 static const int wheels = 14;
 static TOUCHDOWNVTX tdvtx_wheels[wheels] = {
-    {(TDP10_Location), 1e6, 1e5, 1.6, 0.1},
-    {(TDP3_Location), 1e6, 1e5, 3.0, 0.2},
-    {(TDP4_Location), 1e6, 1e5, 3.0, 0.2},
+    {(TDP10_Location), 39240, 13724, 0.0, 0.0},
+    {(TDP3_Location), 39240, 13724, 0.0, 0.0},
+    {(TDP4_Location), 39240, 13724, 0.0, 0.0},
     {(TDP1_Location), 2e4, 1e3, 3.0},
     {(TDP5_Location), 2e4, 1e3, 3.0},
     {(TDP6_Location), 2e4, 1e3, 3.0},
@@ -102,16 +102,21 @@ class AIRCAR: public VESSEL4{
         void clbkSaveState(FILEHANDLE scn) override;
         void clbkPostStep(double, double, double) override;
         void clbkPreStep(double, double, double) override;
+        int clbkConsumeDirectKey(char *kstate) override;
         int clbkConsumeBufferedKey(int, bool, char *) override;
         void clbkPostCreation(void) override;
         //bool clbkLoadVC(int id) override;
 
-        MESHHANDLE AIRCAR_vc;
-        THRUSTER_HANDLE th_main;
-        unsigned int mesh_Cockpit;
+        void SetAnnotationHelp();
+        void MakeAnnotationFormat();
+    
         XRSound *m_pXRSound;
 
     private:
+
+        //Variable for lights control
+        bool lights_on;
+        
         unsigned int anim_left_rudder;
         unsigned int anim_right_rudder;
         unsigned int anim_elevator;
@@ -131,16 +136,21 @@ class AIRCAR: public VESSEL4{
         double propeller_proc;
 
         double wings_proc;
+        bool showHelp;
         
         AIRFOILHANDLE hwing;
+        MESHHANDLE mh_AirCar, mh_AirCar_VC;
+        unsigned int uimesh_AirCar;
+        unsigned int uimesh_Cockpit;
         CTRLSURFHANDLE hlaileron, hraileron;
         BEACONLIGHTSPEC beacon[2], brakelight[2];
         LightEmitter *l1, *l2;
-
+        THRUSTER_HANDLE th_main;
         COLOUR4 col_d = {0.9,0.8,1,0};
 	    COLOUR4 col_s = {1.9,0.8,1,0};
 	    COLOUR4 col_a = {0,0,0,0};
 	    COLOUR4 col_white = {1,1,1,0};
+        NOTEHANDLE helpmsg1, helpmsg2, helpmsg3, helpmsg4, helpmsg5;
 
 };
 
