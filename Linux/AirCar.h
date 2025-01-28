@@ -8,7 +8,7 @@
 #include "KleinVision_AirCar.h"
 #include "XRSound.h"
 
-const double WINGS_OPERATING_SPEED = 0.25;
+const double WINGS_OPERATING_SPEED = 0.12;
 
 const double AIRCAR_SIZE = 3.5; //Mean radius in meters.
 
@@ -47,9 +47,9 @@ const double PROPELLER_ROTATION_SPEED = 10;
 
 static const int wheels = 14;
 static TOUCHDOWNVTX tdvtx_wheels[wheels] = {
-    {(TDP10_Location), 39240, 13724, 0.0, 0.0},
-    {(TDP3_Location), 39240, 13724, 0.0, 0.0},
-    {(TDP4_Location), 39240, 13724, 0.0, 0.0},
+    {(TDP10_Location), 39240, 13724, 1.6, 0.1},
+    {(TDP3_Location), 39240, 13724, 3.0, 0.2},
+    {(TDP4_Location), 39240, 13724, 3.0, 0.2},
     {(TDP1_Location), 2e4, 1e3, 3.0},
     {(TDP5_Location), 2e4, 1e3, 3.0},
     {(TDP6_Location), 2e4, 1e3, 3.0},
@@ -68,11 +68,7 @@ class AIRCAR: public VESSEL4{
 
         enum MySounds {engine_idle, engine, engine_far, rotate};
 
-        enum FoldWingStatus {FW_DEPLOYED, FW_STOWED, FW_DEPLOYING, FW_STOWING} fold_status;
-
-        enum WingRotationStatus {WR_DEPLOYED, WR_STOWED, WR_DEPLOYING, WR_STOWING} WingRotation_status;
-
-        enum WingStowStatus {WS_DEPLOYED, WS_STOWED, WS_DEPLOYING, WS_STOWING} WingStow_status;
+        enum WingStatus {WINGS_DEPLOYED, WINGS_STOWED, WINGS_DEPLOYING, WINGS_STOWING} wings_status;
 
         enum PropellerStatus {STOPPED, RUNNING, STOPPING, STARTING} Propeller_status;
 
@@ -80,17 +76,11 @@ class AIRCAR: public VESSEL4{
         virtual ~AIRCAR();
 
         void DefineAnimations(void);
-        void UpdateFoldAnimation(double);
-        void UpdateRotationAnimation(double);
         void UpdateStowAnimation(double);
         void UpdatePropellerAnimation(double);
 
-        void FoldWing(void);
-        void ActivateFold(FoldWingStatus action);
-        void RotateWings(void);
-        void ActivateWingRotation(WingRotationStatus action);
-        void StowWing(void);
-        void ActivateStowWing(WingStowStatus action);
+        void StowWings(void);
+        void ActivateStowWings(WingStatus action);
         void ActivatePropeller(PropellerStatus action);
         void runPropeller(void);
         void ActivateBeacons(void);
@@ -124,15 +114,11 @@ class AIRCAR: public VESSEL4{
         unsigned int anim_laileron;
         unsigned int anim_raileron;
         
-        unsigned int anim_FoldAileronLeftWing;
-        unsigned int anim_RotateLeftWing;
-        unsigned int anim_left_wing_stow;
+        unsigned int anim_FoldRotateStow;
         unsigned int anim_propeller;
         unsigned int anim_wheels;
         
-        double fold_aileron_proc;
-        double rotate_left_wing_proc;
-        double stow_left_wing_proc;
+        double fold_Rotate_Stow_proc;
         double propeller_proc;
 
         double wings_proc;
@@ -150,7 +136,7 @@ class AIRCAR: public VESSEL4{
 	    COLOUR4 col_s = {1.9,0.8,1,0};
 	    COLOUR4 col_a = {0,0,0,0};
 	    COLOUR4 col_white = {1,1,1,0};
-        NOTEHANDLE helpmsg1, helpmsg2, helpmsg3, helpmsg4, helpmsg5;
+        NOTEHANDLE helpmsg1, helpmsg2, helpmsg3, helpmsg4, helpmsg5, helpmsg6;
 
 };
 

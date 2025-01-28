@@ -82,20 +82,12 @@ void HLiftCoeff (VESSEL *v, double beta, double M, double Re, void *context, dou
 
 //Constructor
 AIRCAR::AIRCAR(OBJHANDLE hVessel, int flightmodel) : VESSEL4(hVessel, flightmodel){
-    
-    DefineAnimations();
 
-	fold_aileron_proc = 0.0;
+	anim_FoldRotateStow = 0;
 
-	rotate_left_wing_proc = 0.0;
+	fold_Rotate_Stow_proc = 0.0;
 
-	stow_left_wing_proc = 0.0;
-
-	WingRotation_status = WR_DEPLOYED;
-
-	fold_status = FW_DEPLOYED;
-
-	WingStow_status = WS_DEPLOYED;
+	wings_status = WINGS_DEPLOYED;
 
 	showHelp = false;
 
@@ -140,7 +132,8 @@ AIRCAR::AIRCAR(OBJHANDLE hVessel, int flightmodel) : VESSEL4(hVessel, flightmode
 	helpmsg5 = nullptr;
 
 	th_main = nullptr;
-	
+
+	DefineAnimations();
 }
 
 //Destructor
@@ -165,6 +158,7 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 	SetCrossSections(AIRCAR_CS);
 	SetPMI(AIRCAR_PMI);
 	SetRotDrag(AIRCAR_RD);
+	SetNosewheelSteering(true);
 	SetTouchdownPoints(tdvtx_wheels, wheels);
 
 	//Propellant resources
@@ -262,9 +256,9 @@ void AIRCAR::DefineAnimations(void){
 		(float)(180*RAD)
 	);
 
-	anim_FoldAileronLeftWing = CreateAnimation(0.0);
-	AddAnimationComponent(anim_FoldAileronLeftWing, 0, 1, &FoldLeftWingAileron);
-	AddAnimationComponent(anim_FoldAileronLeftWing, 0, 1, &FoldRightWingAileron);
+	anim_FoldRotateStow = CreateAnimation(0.0);
+	AddAnimationComponent(anim_FoldRotateStow, 0, 0.25, &FoldLeftWingAileron);
+	AddAnimationComponent(anim_FoldRotateStow, 0, 0.25, &FoldRightWingAileron);
 
 	static unsigned int OpenDoorLeftWingGrp[1] = {Wings_doors_left_Id};
 	static MGROUP_ROTATE OpenDoorLeftWing(
@@ -286,9 +280,8 @@ void AIRCAR::DefineAnimations(void){
 		(float)(105*RAD)
 	);
 
-	AddAnimationComponent(anim_FoldAileronLeftWing, 0, 1, &OpenDoorLeftWing);
-	AddAnimationComponent(anim_FoldAileronLeftWing, 0, 1, &OpenDoorRightWing);
-
+	AddAnimationComponent(anim_FoldRotateStow, 0, 0.25, &OpenDoorLeftWing);
+	AddAnimationComponent(anim_FoldRotateStow, 0, 0.25, &OpenDoorRightWing);
 
 	////Rotate Wings, Ailerons, etc...
 
@@ -312,9 +305,8 @@ void AIRCAR::DefineAnimations(void){
 		(float)(90*RAD)
 	);
 
-	anim_RotateLeftWing = CreateAnimation(0.0);
-	AddAnimationComponent(anim_RotateLeftWing, 0, 1, &RotateWingLeft);
-	AddAnimationComponent(anim_RotateLeftWing, 0, 1, &RotateWingRight);
+	AddAnimationComponent(anim_FoldRotateStow, 0.25, 0.50, &RotateWingLeft);
+	AddAnimationComponent(anim_FoldRotateStow, 0.25, 0.50, &RotateWingRight);
 
 	static unsigned int RotateWingLeftFoldGrp[1] = {Wing_left_fold_Id};
 	static MGROUP_ROTATE RotateWingLeftFold(
@@ -336,8 +328,8 @@ void AIRCAR::DefineAnimations(void){
 		(float)(90*RAD)
 	);
 
-	AddAnimationComponent(anim_RotateLeftWing, 0, 1, &RotateWingLeftFold);
-	AddAnimationComponent(anim_RotateLeftWing, 0, 1, &RotateWingRightFold);
+	AddAnimationComponent(anim_FoldRotateStow, 0.25, 0.50, &RotateWingLeftFold);
+	AddAnimationComponent(anim_FoldRotateStow, 0.25, 0.50, &RotateWingRightFold);
 
 	static unsigned int RotateWingLeftAileronGrp[1] = {Wing_left_aileron_Id};
 	static MGROUP_ROTATE RotateWingLeftAileron(
@@ -359,9 +351,8 @@ void AIRCAR::DefineAnimations(void){
 		(float)(90*RAD)
 	);
 
-	AddAnimationComponent(anim_RotateLeftWing, 0, 1, &RotateWingLeftAileron);
-	AddAnimationComponent(anim_RotateLeftWing, 0, 1, &RotateWingRightAileron);
-
+	AddAnimationComponent(anim_FoldRotateStow, 0.25, 0.50, &RotateWingLeftAileron);
+	AddAnimationComponent(anim_FoldRotateStow, 0.25, 0.50, &RotateWingRightAileron);
 
 	////Stow things
 
@@ -385,10 +376,8 @@ void AIRCAR::DefineAnimations(void){
 		(float)(-82*RAD)
 	);
 
-	anim_left_wing_stow = CreateAnimation(0.0);
-	AddAnimationComponent(anim_left_wing_stow, 0, 1, &StowLeftWing);
-	AddAnimationComponent(anim_left_wing_stow, 0, 1, &StowRightWing);
-
+	AddAnimationComponent(anim_FoldRotateStow, 0.75, 1, &StowLeftWing);
+	AddAnimationComponent(anim_FoldRotateStow, 0.75, 1, &StowRightWing);
 
 	static unsigned int StowLeftWingFoldGrp[1] = {Wing_left_fold_Id};
 	static MGROUP_ROTATE StowLeftWingFold(
@@ -410,9 +399,8 @@ void AIRCAR::DefineAnimations(void){
 		(float)(-90*RAD)
 	);
 
-	AddAnimationComponent(anim_left_wing_stow, 0, 1, &StowLeftWingFold);
-	AddAnimationComponent(anim_left_wing_stow, 0, 1, &StowRightWingFold);
-
+	AddAnimationComponent(anim_FoldRotateStow, 0.75, 1, &StowLeftWingFold);
+	AddAnimationComponent(anim_FoldRotateStow, 0.75, 1, &StowRightWingFold);
 
 	static unsigned int StowLeftAileronGrp[1] = {Wing_left_aileron_Id};
 	static MGROUP_ROTATE StowLeftAileron(
@@ -434,8 +422,8 @@ void AIRCAR::DefineAnimations(void){
 		(float)(-90*RAD)
 	);
 
-	AddAnimationComponent(anim_left_wing_stow, 0, 1, &StowLeftAileron);
-	AddAnimationComponent(anim_left_wing_stow, 0, 1, &StowRightAileron);
+	AddAnimationComponent(anim_FoldRotateStow, 0.75, 1, &StowLeftAileron);
+	AddAnimationComponent(anim_FoldRotateStow, 0.75, 1, &StowRightAileron);
 
 	static unsigned int CloseDoorLeftWingGrp[1] = {Wings_doors_left_Id};
 	static MGROUP_ROTATE CloseDoorLeftWing(
@@ -457,20 +445,18 @@ void AIRCAR::DefineAnimations(void){
 		(float)(-105*RAD)
 	);
 
-
-	AddAnimationComponent(anim_left_wing_stow, 0, 1, &CloseDoorLeftWing);
-	AddAnimationComponent(anim_left_wing_stow, 0, 1, &CloseDoorRightWing);
+	AddAnimationComponent(anim_FoldRotateStow, 0.75, 1, &CloseDoorLeftWing);
+	AddAnimationComponent(anim_FoldRotateStow, 0.75, 1, &CloseDoorRightWing);
 
 	static unsigned int StowElevatorsGrp[4] = {Elevators_Id, Elevators_mobile_parts_Id, Elevators_rudder_left_Id, Elevators_rudder_right_Id};
 	static MGROUP_TRANSLATE StowElevators(
 		0,
 		StowElevatorsGrp,
 		4,
-		_V(0, 0, 0.7) //Ajustar el valor de desplazamiento Z aquí.
+		_V(0, 0, 0.7)
 	);
-	
-	AddAnimationComponent(anim_left_wing_stow, 0, 1, &StowElevators);
 
+	AddAnimationComponent(anim_FoldRotateStow, 0.75, 1, &StowElevators);
 
 	//Control surfaces...
 
@@ -601,19 +587,9 @@ void AIRCAR::clbkLoadStateEx(FILEHANDLE scn, void *vs){
 	char *line;
 
 	while(oapiReadScenario_nextline(scn, line)){
-		if(!_strnicmp(line, "FOLDWING", 8)){
-			sscanf(line+8, "%d%lf", (int *)&fold_status, &fold_aileron_proc);
-			SetAnimation(anim_FoldAileronLeftWing, fold_aileron_proc);
-		} else if(!_strnicmp(line, "ROTATEDWINGS", 12)){
-			sscanf(line+12, "%d%lf", (int *)&WingRotation_status, &rotate_left_wing_proc);
-			SetAnimation(anim_RotateLeftWing, rotate_left_wing_proc);
-		} else if(!strnicmp(line, "WINGSSTOWED", 11)){
-			sscanf(line+11, "%d%lf", (int *)&WingStow_status, &stow_left_wing_proc);
-			SetAnimation(anim_left_wing_stow, stow_left_wing_proc);
-		} else {
-			ParseScenarioLineEx(line, vs);
-		}
+		ParseScenarioLineEx(line, vs);
 	}
+
 }
 
 void AIRCAR::clbkSaveState(FILEHANDLE scn){
@@ -622,45 +598,18 @@ void AIRCAR::clbkSaveState(FILEHANDLE scn){
 
 	SaveDefaultState(scn);
 
-	sprintf(cbuf, "%d %0.4f", fold_status, fold_aileron_proc);
-	oapiWriteScenario_string(scn, "FOLDWING", cbuf);
-	
-	sprintf(cbuf, "%d %0.4f", WingRotation_status, rotate_left_wing_proc);
-	oapiWriteScenario_string(scn, "ROTATEDWINGS", cbuf);
-
-	sprintf(cbuf, "%d %0.4f", WingStow_status, stow_left_wing_proc);
-	oapiWriteScenario_string(scn, "WINGSSTOWED", cbuf);
 }
 
 ////////////Logic for trigger animations
 
-void AIRCAR::FoldWing(void){
-	ActivateFold((fold_status == FW_DEPLOYED || fold_status == FW_DEPLOYING) ?
-		FW_STOWING : FW_DEPLOYING);
+
+void AIRCAR::StowWings(void){
+	ActivateStowWings((wings_status == WINGS_DEPLOYED || wings_status == WINGS_DEPLOYING) ?
+		WINGS_STOWING : WINGS_DEPLOYING);
 }
 
-void AIRCAR::ActivateFold(FoldWingStatus action){
-
-	fold_status = action;
-
-}
-
-void AIRCAR::RotateWings(void){
-	ActivateWingRotation((WingRotation_status == WR_DEPLOYED || WingRotation_status == WR_DEPLOYING) ?
-		WR_STOWING : WR_DEPLOYING);
-}
-
-void AIRCAR::ActivateWingRotation(WingRotationStatus action){
-	WingRotation_status = action;
-}
-
-void AIRCAR::StowWing(void){
-	ActivateStowWing((WingStow_status == WS_DEPLOYED || WingStow_status == WS_DEPLOYING) ?
-		WS_STOWING : WS_DEPLOYING);
-}
-
-void AIRCAR::ActivateStowWing(WingStowStatus action){
-	WingStow_status = action;
+void AIRCAR::ActivateStowWings(WingStatus action){
+	wings_status = action;
 }
 
 ////////////Running animations...
@@ -728,8 +677,6 @@ void AIRCAR::clbkPostCreation(){
 
 void AIRCAR::clbkPostStep(double simt, double simdt, double mjd){
 
-	UpdateFoldAnimation(simdt);
-	UpdateRotationAnimation(simdt);
 	UpdateStowAnimation(simdt);
 
 }
@@ -737,77 +684,22 @@ void AIRCAR::clbkPostStep(double simt, double simdt, double mjd){
 
 ////////////Functions for animations
 
-void AIRCAR::UpdateFoldAnimation(double simdt){
-    
-	if (fold_status >= FW_DEPLOYING) {
-        
-		double da = simdt * WINGS_OPERATING_SPEED;
-
-        if (fold_status == FW_DEPLOYING) {
-            if (fold_aileron_proc > 0.0) fold_aileron_proc = std::max(0.0, fold_aileron_proc - da);
-            else fold_status = FW_DEPLOYED;
-        } else {
-            if (fold_aileron_proc < 1.0) fold_aileron_proc = std::min(1.0, fold_aileron_proc + da);
-            else fold_status = FW_STOWED;
-        }
-        SetAnimation(anim_FoldAileronLeftWing, fold_aileron_proc);
-    }
-}
-
-void AIRCAR::UpdateRotationAnimation(double simdt){
-	if (WingRotation_status >= WR_DEPLOYING) {
-        
-		double da = simdt * WINGS_OPERATING_SPEED;
-
-        if (WingRotation_status == WR_DEPLOYING) {
-            if (rotate_left_wing_proc > 0.0) rotate_left_wing_proc = std::max(0.0, rotate_left_wing_proc - da);
-            else WingRotation_status = WR_DEPLOYED;
-			ActivateBeacons();
-        } else {
-            if (rotate_left_wing_proc < 1.0) rotate_left_wing_proc = std::min(1.0, rotate_left_wing_proc + da);
-            else WingRotation_status = WR_STOWED;
-        }
-        SetAnimation(anim_RotateLeftWing, rotate_left_wing_proc);
-    }
-}
-
 void AIRCAR::UpdateStowAnimation(double simdt){
-	if (WingStow_status >= WS_DEPLOYING) {
+    
+	if (wings_status >= WINGS_DEPLOYING) {
         
 		double da = simdt * WINGS_OPERATING_SPEED;
 
-        if (WingStow_status == WS_DEPLOYING) {
-            if (stow_left_wing_proc > 0.0) stow_left_wing_proc = std::max(0.0, stow_left_wing_proc - da);
-            else WingStow_status = WS_DEPLOYED;
-			ActivateBrakeLights();
+        if (wings_status == WINGS_DEPLOYING) {
+            if (fold_Rotate_Stow_proc > 0.0) fold_Rotate_Stow_proc = std::max(0.0, fold_Rotate_Stow_proc - da);
+            else wings_status = WINGS_DEPLOYED;
         } else {
-            if (stow_left_wing_proc < 1.0) stow_left_wing_proc = std::min(1.0, stow_left_wing_proc + da);
-            else WingStow_status = WS_STOWED;
-			ActivateBrakeLights();
+            if (fold_Rotate_Stow_proc < 1.0) fold_Rotate_Stow_proc = std::min(1.0, fold_Rotate_Stow_proc + da);
+            else wings_status = WINGS_STOWED;
         }
-        SetAnimation(anim_left_wing_stow, stow_left_wing_proc);
+        SetAnimation(anim_FoldRotateStow, fold_Rotate_Stow_proc);
     }
 }
-
-/*
-void AIRCAR::UpdatePropellerAnimation(double simdt){
-
-	if(Propeller_status >= STOPPING){
-
-		double da = simdt * PROPELLER_ROTATION_SPEED;
-
-		if(Propeller_status == STOPPING){
-			if(propeller_proc > 0.0) propeller_proc = std::max(0.0, propeller_proc - da);
-			else Propeller_status = STOPPED;
-		} else {
-			if(propeller_proc < 1.0) propeller_proc = std::min(1.0, propeller_proc + da);
-			else Propeller_status = RUNNING;
-		}
-		SetAnimation(anim_propeller, propeller_proc);
-	}
-
-}
-*/
 
 void AIRCAR::ActivateBeacons(void){
 
@@ -854,6 +746,7 @@ void AIRCAR::SetAnnotationHelp(){
 
 	const char *hlpbeacons = "";
 	const char *hlplights = "";
+	const char *hlpwings = "";
 
 	const char *hlphelp = "";
 
@@ -863,8 +756,9 @@ void AIRCAR::SetAnnotationHelp(){
 
 		hlpbeacons = "Press B to activate beacons";
 		hlplights = "Press F to activate lights";
+		hlpwings = "Press S to stow/deploy wings";
 
-		hlphelp = "Press H to display/hide this help";
+		hlphelp = "Press ALT H to display/hide this help";
 
 	} else {
 
@@ -873,6 +767,8 @@ void AIRCAR::SetAnnotationHelp(){
 
 		hlpbeacons = "";
 		hlplights = "";
+		hlpwings = "";
+
 		hlphelp = "";
 
 	}
@@ -882,7 +778,9 @@ void AIRCAR::SetAnnotationHelp(){
 
 	oapiAnnotationSetText(helpmsg3, hlpbeacons);
 	oapiAnnotationSetText(helpmsg4, hlplights);
-	oapiAnnotationSetText(helpmsg5, hlphelp);
+	oapiAnnotationSetText(helpmsg5, hlpwings);
+
+	oapiAnnotationSetText(helpmsg6, hlphelp);
 }
 
 void AIRCAR::MakeAnnotationFormat(){
@@ -904,11 +802,13 @@ void AIRCAR::MakeAnnotationFormat(){
 	helpmsg5 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
 	oapiAnnotationSetPos(helpmsg5, 0.3, 0.40, 0.75, 0.44);
 
+	helpmsg6 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
+	oapiAnnotationSetPos(helpmsg6, 0.3, 0.45, 0.75, 0.48);
+
 
 }
 
 int AIRCAR::clbkConsumeDirectKey(char *kstate){
-
 
 	return 0;
 	
@@ -917,15 +817,7 @@ int AIRCAR::clbkConsumeDirectKey(char *kstate){
 int AIRCAR::clbkConsumeBufferedKey(int key, bool down, char *kstate){
 
 	if(key == OAPI_KEY_1 && down){
-		FoldWing();
-		return 1;
-	}
-	if(key == OAPI_KEY_2 && down){
-		RotateWings();
-		return 1;
-	}
-	if(key == OAPI_KEY_3 && down){
-		StowWing();
+		StowWings();
 		return 1;
 	}
 	if(key == OAPI_KEY_B && down){
@@ -937,7 +829,7 @@ int AIRCAR::clbkConsumeBufferedKey(int key, bool down, char *kstate){
 		return 1;
 	}
 
-	if(key == OAPI_KEY_H && down){
+	if((key == OAPI_KEY_LALT) && (key == OAPI_KEY_H) && down){
 		if(!showHelp){
 			showHelp = true;
 		} else {
