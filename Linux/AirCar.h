@@ -141,7 +141,7 @@ class AIRCAR: public VESSEL4{
 	    COLOUR4 col_s = {1.9,0.8,1,0};
 	    COLOUR4 col_a = {0,0,0,0};
 	    COLOUR4 col_white = {1,1,1,0};
-        NOTEHANDLE helpmsg1, helpmsg2, helpmsg3, helpmsg4, helpmsg5, helpmsg6, helpmsg7;
+        NOTEHANDLE helpmsg1, helpmsg2, helpmsg3, helpmsg4, helpmsg5, helpmsg6, helpmsg7, helpmsg8;
 
 };
 

@@ -18,10 +18,8 @@
 
 #include <cmath>
 #define ORBITER_MODULE
-#include <cstring>
 #include "AirCar.h"
 #include <algorithm>
-#include <cstdio>
 #include "XRSound.h"
 
 
@@ -781,6 +779,8 @@ void AIRCAR::SetAnnotationHelp(){
 	const char *hlpwings = "";
 	const char *hlpsteer = "";
 
+	const char *hlpbrakes = "";
+
 	const char *hlphelp = "";
 
 	if(showHelp == true){
@@ -793,6 +793,7 @@ void AIRCAR::SetAnnotationHelp(){
 
 		hlpwings = "Press S to stow/deploy wings";
 		hlpsteer = "Steer/brake with COMMA , and PERIOD . ";
+		hlpbrakes = "Engage parking brake with NUMPAD ENTER";
 
 		hlphelp = "Press K to display/hide this help";
 
@@ -805,6 +806,7 @@ void AIRCAR::SetAnnotationHelp(){
 		hlplights = "";
 		hlpwings = "";
 		hlpsteer = "";
+		hlpbrakes = "";
 
 		hlphelp = "";
 
@@ -817,8 +819,10 @@ void AIRCAR::SetAnnotationHelp(){
 	oapiAnnotationSetText(helpmsg4, hlplights);
 	oapiAnnotationSetText(helpmsg5, hlpwings);
 	oapiAnnotationSetText(helpmsg6, hlpsteer);
+	oapiAnnotationSetText(helpmsg7, hlpbrakes);
 
-	oapiAnnotationSetText(helpmsg6, hlphelp);
+
+	oapiAnnotationSetText(helpmsg8, hlphelp);
 }
 
 void AIRCAR::MakeAnnotationFormat(){
@@ -841,10 +845,13 @@ void AIRCAR::MakeAnnotationFormat(){
 	oapiAnnotationSetPos(helpmsg5, 0.3, 0.40, 0.75, 0.44);
 
 	helpmsg6 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
-	oapiAnnotationSetPos(helpmsg6, 0.30, 0.46, 0.75, 0.50);
+	oapiAnnotationSetPos(helpmsg6, 0.3, 0.46, 0.75, 0.50);
 
-	helpmsg6 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
-	oapiAnnotationSetPos(helpmsg6, 0.3, 0.52, 0.75, 0.54);
+	helpmsg7 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
+	oapiAnnotationSetPos(helpmsg7, 0.3, 0.52, 0.75, 0.56);
+
+	helpmsg8 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
+	oapiAnnotationSetPos(helpmsg8, 0.3, 0.58, 0.75, 0.62);
 
 
 }
