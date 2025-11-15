@@ -6,9 +6,10 @@
 #include "VesselAPI.h"
 #include "Orbitersdk.h"
 #include "KleinVision_AirCar.h"
+#include "KV_AirCar_cockpit.h"
 #include "XRSound.h"
 
-const double WINGS_OPERATING_SPEED = 0.12;
+const double WINGS_OPERATING_SPEED = 0.06;
 
 const double AIRCAR_SIZE = 3.5; //Mean radius in meters.
 
@@ -86,6 +87,7 @@ class AIRCAR: public VESSEL4{
         void ActivateBeacons(void);
         void ActivateBrakeLights(void);
         void LightsControl(void);
+        void ParkingBrake();
 
         void clbkSetClassCaps(FILEHANDLE cfg) override;
         void clbkLoadStateEx(FILEHANDLE scn, void *vs) override;
@@ -95,7 +97,7 @@ class AIRCAR: public VESSEL4{
         int clbkConsumeDirectKey(char *kstate) override;
         int clbkConsumeBufferedKey(int, bool, char *) override;
         void clbkPostCreation(void) override;
-        //bool clbkLoadVC(int id) override;
+        bool clbkLoadVC(int id) override;
 
         void SetAnnotationHelp();
         void MakeAnnotationFormat();
@@ -106,7 +108,9 @@ class AIRCAR: public VESSEL4{
 
         //Variable for lights control
         bool lights_on;
-        
+
+        bool parkingBrakeEnabled;
+
         unsigned int anim_left_rudder;
         unsigned int anim_right_rudder;
         unsigned int anim_elevator;
@@ -120,6 +124,7 @@ class AIRCAR: public VESSEL4{
         
         double fold_Rotate_Stow_proc;
         double propeller_proc;
+        double wheels_rotation;
 
         double wings_proc;
         bool showHelp;
@@ -136,7 +141,7 @@ class AIRCAR: public VESSEL4{
 	    COLOUR4 col_s = {1.9,0.8,1,0};
 	    COLOUR4 col_a = {0,0,0,0};
 	    COLOUR4 col_white = {1,1,1,0};
-        NOTEHANDLE helpmsg1, helpmsg2, helpmsg3, helpmsg4, helpmsg5, helpmsg6;
+        NOTEHANDLE helpmsg1, helpmsg2, helpmsg3, helpmsg4, helpmsg5, helpmsg6, helpmsg7;
 
 };
 

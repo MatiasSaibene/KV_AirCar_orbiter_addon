@@ -89,7 +89,7 @@ AIRCAR::AIRCAR(OBJHANDLE hVessel, int flightmodel) : VESSEL4(hVessel, flightmode
 
 	wings_status = WINGS_DEPLOYED;
 
-	showHelp = false;
+	showHelp = true;
 
 	Propeller_status = STOPPED;
 
@@ -130,10 +130,18 @@ AIRCAR::AIRCAR(OBJHANDLE hVessel, int flightmodel) : VESSEL4(hVessel, flightmode
 	helpmsg3 = nullptr;
 	helpmsg4 = nullptr;
 	helpmsg5 = nullptr;
+	helpmsg6 = nullptr;
+	helpmsg7 = nullptr;
 
 	th_main = nullptr;
 
 	DefineAnimations();
+
+	lights_on = false;
+
+	parkingBrakeEnabled = false;
+
+	wheels_rotation = 0.0;
 }
 
 //Destructor
@@ -150,6 +158,11 @@ void AIRCAR::clbkSetClassCaps(FILEHANDLE cfg){
 
 	mh_AirCar = oapiLoadMeshGlobal(MESH_NAME);
 	uimesh_AirCar = AddMesh(mh_AirCar);
+	SetMeshVisibilityMode(uimesh_AirCar, MESHVIS_EXTERNAL);
+
+	mh_AirCar_VC = oapiLoadMeshGlobal("KV_AirCar_Cockpit");
+	uimesh_Cockpit = AddMesh(mh_AirCar_VC);
+	SetMeshVisibilityMode(uimesh_Cockpit, MESHVIS_VC);
 
     //Physical vessel resources
     SetSize(AIRCAR_SIZE);
@@ -616,6 +629,16 @@ void AIRCAR::ActivateStowWings(WingStatus action){
 
 void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
 
+	//Wheel animation
+	VECTOR3 speed = _V(0, 0, 0);
+	GetGroundspeedVector(FRAME_LOCAL, speed);
+
+	double rotation_speed = speed.z / (2 * PI * 0.0286);
+
+	wheels_rotation = std::fmod(wheels_rotation + oapiGetSimStep() * rotation_speed, 1.0);
+
+	SetAnimation(anim_wheels, wheels_rotation);
+
 	double alt = GetAltitude();
 	double grnspd = GetGroundspeed();
 
@@ -629,10 +652,10 @@ void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
 
 	if(prp < 1){
 		SetAnimation(anim_propeller, propeller_proc);
-		SetAnimation(anim_wheels, propeller_proc);
+		//SetAnimation(anim_wheels, propeller_proc);
 	} else {
 		SetAnimation(anim_propeller, 0.0);
-		SetAnimation(anim_wheels, 0.0);
+		//SetAnimation(anim_wheels, 0.0);
 	}
 
 //Thanks johnnymanly
@@ -649,10 +672,8 @@ void AIRCAR::clbkPreStep(double simt, double simdt, double mjd){
     vi:set_animation(anim_Prop)
   end*/
 	
-	if(1){
-		m_pXRSound->PlayWav(engine_idle, true, 1.0);
-	}
-
+	m_pXRSound->PlayWav(engine_idle, true, 1.0);
+	
 	if(alt > 1500){
 		m_pXRSound->PlayWav(engine_far, false, 1.0);
 	}
@@ -701,6 +722,17 @@ void AIRCAR::UpdateStowAnimation(double simdt){
     }
 }
 
+void AIRCAR::ParkingBrake(){
+
+	if(!parkingBrakeEnabled){
+		SetWheelbrakeLevel(1, 0 , true);
+		parkingBrakeEnabled = true;
+	} else {
+		SetWheelbrakeLevel(0, 0, true);
+        parkingBrakeEnabled = false;
+	}
+}
+
 void AIRCAR::ActivateBeacons(void){
 
 	for(int i = 0; i < 2; i++){
@@ -747,6 +779,7 @@ void AIRCAR::SetAnnotationHelp(){
 	const char *hlpbeacons = "";
 	const char *hlplights = "";
 	const char *hlpwings = "";
+	const char *hlpsteer = "";
 
 	const char *hlphelp = "";
 
@@ -756,9 +789,12 @@ void AIRCAR::SetAnnotationHelp(){
 
 		hlpbeacons = "Press B to activate beacons";
 		hlplights = "Press F to activate lights";
-		hlpwings = "Press S to stow/deploy wings";
 
-		hlphelp = "Press ALT H to display/hide this help";
+
+		hlpwings = "Press S to stow/deploy wings";
+		hlpsteer = "Steer/brake with COMMA , and PERIOD . ";
+
+		hlphelp = "Press K to display/hide this help";
 
 	} else {
 
@@ -768,6 +804,7 @@ void AIRCAR::SetAnnotationHelp(){
 		hlpbeacons = "";
 		hlplights = "";
 		hlpwings = "";
+		hlpsteer = "";
 
 		hlphelp = "";
 
@@ -779,6 +816,7 @@ void AIRCAR::SetAnnotationHelp(){
 	oapiAnnotationSetText(helpmsg3, hlpbeacons);
 	oapiAnnotationSetText(helpmsg4, hlplights);
 	oapiAnnotationSetText(helpmsg5, hlpwings);
+	oapiAnnotationSetText(helpmsg6, hlpsteer);
 
 	oapiAnnotationSetText(helpmsg6, hlphelp);
 }
@@ -803,7 +841,10 @@ void AIRCAR::MakeAnnotationFormat(){
 	oapiAnnotationSetPos(helpmsg5, 0.3, 0.40, 0.75, 0.44);
 
 	helpmsg6 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
-	oapiAnnotationSetPos(helpmsg6, 0.3, 0.45, 0.75, 0.48);
+	oapiAnnotationSetPos(helpmsg6, 0.30, 0.46, 0.75, 0.50);
+
+	helpmsg6 = oapiCreateAnnotation(true, 1, _V(0, 1, 0));
+	oapiAnnotationSetPos(helpmsg6, 0.3, 0.52, 0.75, 0.54);
 
 
 }
@@ -816,7 +857,7 @@ int AIRCAR::clbkConsumeDirectKey(char *kstate){
 
 int AIRCAR::clbkConsumeBufferedKey(int key, bool down, char *kstate){
 
-	if(key == OAPI_KEY_1 && down){
+	if(key == OAPI_KEY_S && down){
 		StowWings();
 		return 1;
 	}
@@ -828,8 +869,12 @@ int AIRCAR::clbkConsumeBufferedKey(int key, bool down, char *kstate){
 		LightsControl();
 		return 1;
 	}
+	if(key == OAPI_KEY_NUMPADENTER && down){
+        ParkingBrake();
+        return 1;
+    }
 
-	if((key == OAPI_KEY_LALT) && (key == OAPI_KEY_H) && down){
+	if(key == OAPI_KEY_K && down){
 		if(!showHelp){
 			showHelp = true;
 		} else {
@@ -837,6 +882,37 @@ int AIRCAR::clbkConsumeBufferedKey(int key, bool down, char *kstate){
 		}
 	}
 	return 0;
+}
+
+bool AIRCAR::clbkLoadVC(int id){
+
+	static VCMFDSPEC mfds_1 {static_cast<int>(uimesh_Cockpit), MFD1_Id};
+	oapiVCRegisterMFD(MFD_LEFT, &mfds_1);
+
+	static VCMFDSPEC mfds_2 {static_cast<int>(uimesh_Cockpit), MFD2_Id};
+	oapiVCRegisterMFD(MFD_RIGHT, &mfds_2);
+
+
+	switch(id){
+
+		case 0:
+			SetCameraOffset(VC_camera1_Location);
+			SetCameraDefaultDirection(_V(0, 0, 1));
+			SetCameraRotationRange(120*RAD, 120*RAD, 60*RAD, 60*RAD);
+			oapiVCSetNeighbours(-1, 1, -1, -1);
+		break;
+
+		case 1:
+			SetCameraOffset(VC_camera2_Location);
+			SetCameraDefaultDirection(_V(0, 0, 1));
+			SetCameraRotationRange(120*RAD, 120*RAD, 60*RAD, 60*RAD);
+			oapiVCSetNeighbours(1, -1, -1, -1);
+		break;
+
+	}
+
+	return true;
+
 }
 
 ////////////////////////////////////
