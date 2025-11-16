@@ -1,19 +1,19 @@
-// Auto generated code file.  Blender: 3.3.9  Blender Tools: (2, 1, 2)
-// Date: Wed Nov 15 16:47:38 2023
+// Auto generated code file.  Blender: 3.3.9  Blender Tools: (2, 1, 3)
+// Date: Tue Jan 28 16:05:05 2025
 
 
-#include "Orbitersdk.h"
-
+#include "../../include/Orbitersdk.h"
+#include <cstdint>
 
 #ifndef __KleinVision_AirCar_H
 #define __KleinVision_AirCar_H
 
 
-    const DWORD TXIDX_Main_body_dds = 1;
-    const DWORD TXIDX_Chrome_material_dds = 2;
-    const DWORD TXIDX_Wheels_front_dds = 3;
-    const DWORD TXIDX_Wing_left_dds = 4;
-    const DWORD TXIDX_Headlights_dds = 5;
+    const uint32_t TXIDX_Main_body_dds = 1;
+    const uint32_t TXIDX_Chrome_material_dds = 2;
+    const uint32_t TXIDX_Wheels_front_dds = 3;
+    const uint32_t TXIDX_Wing_left_dds = 4;
+    const uint32_t TXIDX_Headlights_dds = 5;
     constexpr auto MESH_NAME = "KleinVision_AirCar";
 
     const UINT Propeller_shaft_Id = 0;
@@ -64,6 +64,7 @@
     constexpr VECTOR3 Beacon2_Location =     {4.0428, 0.5003, 0.1162};
     constexpr VECTOR3 Light1_Location =     {-0.9458, 0.6832, 2.5686};
     constexpr VECTOR3 Light2_Location =     {0.9453, 0.6832, 2.5686};
+    constexpr VECTOR3 Engine_Location =     {0.0000, 0.0000, -2.2000};
     constexpr VECTOR3 TDP0_Location =     {-0.9402, -0.2410, 2.0700};
     constexpr VECTOR3 TDP3_Location =     {-0.9442, -0.2410, -1.2100};
     constexpr VECTOR3 TDP2_Location =     {0.9358, -0.2410, 2.0700};
@@ -79,6 +80,7 @@
     constexpr VECTOR3 TDP_WING1_Location =     {-3.9968, 0.4231, -0.3259};
     constexpr VECTOR3 TDP_WING3_Location =     {3.9981, 0.4231, -0.3259};
     constexpr VECTOR3 TDP10_Location =     {-0.0042, -0.2410, 2.0700};
+    constexpr VECTOR3 Rear_Axle_Location =     {-0.0042, -0.2410, -1.2100};
     constexpr VECTOR3 Axis_Left_wing_Location =     {-0.8976, 0.5000, 0.1900};
     constexpr VECTOR3 Axis_Left_wing_fold_Location =     {-2.4328, 0.5781, 0.1571};
     constexpr VECTOR3 Axis_right_wing_fold_Location =     {2.4672, 0.5781, 0.1571};
